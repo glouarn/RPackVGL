@@ -13,7 +13,7 @@ README for RPackVGL
 ## Authors
 
 **Gaetan LOUARN**,  - see file [AUTHORS](AUTHORS) for details
-
+**Mayssa HArfouch**
 
 ## License
 
