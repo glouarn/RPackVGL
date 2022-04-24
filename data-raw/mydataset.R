@@ -28,10 +28,15 @@ paramsd_0 <- read.table(unz(path_zip0, "paramsd_0.csv"), header=T, sep=";")
 
 
 
+## exemple files
+path_totocompet <- system.file("extdata", "dtoto_ind_compet_exemple.csv", package = "RPackVGL")
+tabtoto_compet <- read.table(path_totocompet, header=T, sep=",", dec=".")
+#j'ai du le copier manuellement
+
 # This should be the last line.
 # Note that names are unquoted.
 # I like using overwrite = T so everytime I run the script the
 # updated objects are saved, but the default is overwrite = F
-usethis::use_data(plt_par, toto_0, outHR_0, overwrite = T)
+usethis::use_data(plt_par, toto_0, outHR_0, tabtoto_compet, overwrite = T)
 
 
