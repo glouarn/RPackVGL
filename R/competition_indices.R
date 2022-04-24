@@ -5,6 +5,59 @@
 
 
 
+#' Single species response to density
+#'
+#' @param a A parameter..
+#' @param b A parameter..
+#' @param densite plant density..
+#' @return Yield at density
+#' @export
+Yresp_densite1 <- function(a ,b, densite)
+{
+  # eq 2.3 - sackeville hamilton exprimee en reponse au Ytot
+  Ytot = densite/(a+b*densite)
+  Ytot
+}
+
+
+
+
+#' Calculate Beta competition coefficient for intra-specific competition
+#'
+#' @param x A dtoto data.frame of the pure species containing Ytot, densite, nbplt and surfsolref vectors
+#' @return A model fit result with "a","b" and "beta" values
+#' @export
+#' @examples
+#' dtoto <- tabtoto_compet
+#' sp_dtoto <- split(dtoto, dtoto$keysc)
+#' key <-"88-1 Fix2-nonFixSimTest Lusignan30IrrN2 -"
+#' keypur <- "88-1 nonFixSimTest-nonFixSimTest Lusignan30IrrN2 -"
+#' dat <- rbind(sp_dtoto[[key]], sp_dtoto[[keypur]])
+#' pur1 <- dat[dat$densite2 == 0., ]
+#' Calc_Beta_coeff(pur1)
+Calc_Beta_coeff <- function(x)
+{
+  #x = tableau dtoto des culture pure avec Ytot, densite, nbplt et surfsolref
+  # eq 2.3 - sackeville hamilton sous forme non lineaire
+  #par fit non lineaire
+
+  startlist <- list(a=0.01, b=0.0004)
+  model1 <- nls(Ytot~Yresp_densite1(a ,b, densite), data=x, start=startlist )
+  parameters1 <- summary(model1)[["parameters"]]
+
+  a1 <- parameters1[1] #intercept
+  b1 <- parameters1[2] #slope
+  beta1 <- b1/a1
+  res <- list(model1, a1,b1,beta1)
+  names(res) <- c("model", "a","b","beta")
+  res
+}
+
+#Calc_Beta_coeff(pur1)
+#Calc_Beta_coeff(pur2)
+
+
+
 
 Calc_Beta_coeff_Jul <- function(x)
 {
@@ -26,39 +79,40 @@ Calc_Beta_coeff_Jul <- function(x)
 #Calc_Beta_coeff_Jul(pur2)
 
 
-Calc_Beta_coeff <- function(x)
-{
-  #x = tableau dtoto des culture pure avec Ytot, densite, nbplt et surfsolref
-  # eq 2.3 - sackeville hamilton sous forme non lineaire
-  #par fit non lineaire
-
-  startlist <- list(a=0.01, b=0.0004)
-  model1 <- nls(Ytot~Yresp_densite1(a ,b, densite), data=x, start=startlist )
-  parameters1 <- summary(model1)[["parameters"]]
-
-  a1 <- parameters1[1] #intercept
-  b1 <- parameters1[2] #slope
-  beta1 <- b1/a1
-  res <- list(model1, a1,b1,beta1)
-  names(res) <- c("model", "a","b","beta")
-  res
-}
-
-
-#Calc_Beta_coeff(pur1)
-#Calc_Beta_coeff(pur2)
 
 
 
-Yresp_densite1 <- function(a ,b, densite)
-{
-  # eq 2.3 - sackeville hamilton exprimee en reponse au Ytot
-  Ytot = densite/(a+b*densite)
-  Ytot
-}
-
-
+#' Two species response to density
+#'
+#' @param a A parameter..
+#' @param beta A parameter..
+#' @param gamma A parameter..
+#' @param densite1 plant density..
+#' @param densite2 plant density..
+#' @return Yield of Esp1 according to densities of Esp1 and Esp2 and intra- / inter- specific competition coefficients
+#' @export
 Yresp_densite2 <- function(a ,beta, gamma, densite1, densite2)
+{
+  # eq 2.4 - sackeville hamilton exprimee en reponse au Yespi a densite de deux espece
+  #par modele non lineaire
+  Yesp1 = densite1 / (a + a*beta*densite1 + a*gamma*densite2)
+  Yesp1
+}
+#Yresp_densite2(a ,beta, gamma, densite1, densite2)
+
+
+
+
+#' Two species response to density with inverse calculation
+#'
+#' @param a A parameter..
+#' @param beta A parameter..
+#' @param gamma A parameter..
+#' @param densite1 plant density..
+#' @param densite2 plant density..
+#' @return inverse of Yield of Esp1 according to densities of Esp1 and Esp2 and intra- / inter- specific competition coefficients
+#' @export
+Yresp_densite2_inv <- function(a ,beta, gamma, densite1, densite2)
 {
   # eq 2.4 - sackeville hamilton exprimee en reponse au Yespi a densite de deux espece
   #par modele lineaire sur inverse rendement
@@ -66,30 +120,33 @@ Yresp_densite2 <- function(a ,beta, gamma, densite1, densite2)
   inv_Yi
 }
 
-#Yresp_densite2_diag <- function(a ,beta, gamma, dtot, densite1)
-#{
-#  # eq 2.4 - sackeville hamilton exprimee en reponse au Yespi a densite de deux espece
-#  # une seule variable dans dipositif de DeWit car dtot=cst (a forcer dans l'optimisation)
-#  inv_Yi = a + a*beta*densite1 + a*gamma*(dtot-densite1)
-#  inv_Yi
-#}
-#marche pas plus... seule sur diag
 
-
-Yresp_densite2bis <- function(a ,beta, gamma, densite1, densite2)
-{
-  # eq 2.4 - sackeville hamilton exprimee en reponse au Yespi a densite de deux espece
-  #par modele non lineaire
-  Yesp1 = densite1 / (a + a*beta*densite1 + a*gamma*densite2)
-  Yesp1
-}
-#Yresp_densite2bis(a ,beta, gamma, densite1, densite2)
-
-
-
-
-
-
+#' Calculate Gamma competition coefficient for inter-specific competition
+#'
+#' @param x A dtoto data.frame of the mixed species containing Ytot, densite1, densite2, Yesp1, Yesp2, nbplt and surfsolref vectors
+#' @param iso1 A dtoto data.frame of the isolated plants for Esp1 containing Ytot, densite1, densite2, Yesp1, Yesp2, nbplt and surfsolref vectors
+#' @param iso2 A dtoto data.frame of the isolated plants for Esp2 containing Ytot, densite1, densite2, Yesp1, Yesp2, nbplt and surfsolref vectors
+#' @param res1 A model fit for response to density of Esp1 with "a","b" and "beta" values
+#' @param res2 A model fit for response to density of Esp2 with "a","b" and "beta" values
+#' @param free An optional parameter to force beta parameters as estimated from pure species
+#' @return A model fit result "model1", "model2", "parameters1", "parameters2"
+#' @export
+#' @examples
+#' dtoto <- tabtoto_compet
+#' sp_dtoto <- split(dtoto, dtoto$keysc)
+#' key <-"88-1 Fix2-nonFixSimTest Lusignan30IrrN2 -"
+#' keypur <- "88-1 nonFixSimTest-nonFixSimTest Lusignan30IrrN2 -"
+#' dat <- rbind(sp_dtoto[[key]], sp_dtoto[[keypur]])
+#' pur1 <- dat[dat$densite2 == 0., ]
+#' pur2 <- dat[dat$densite1 == 0., ]
+#' diag <- dat[dat$densite == 400., ]
+#' iso1 <- pur1[pur1$densite ==min(pur1$densite) , ]
+#' iso2 <- pur2[pur2$densite ==min(pur2$densite) , ]
+#' res1 <- Calc_Beta_coeff(pur1)
+#' res2 <- Calc_Beta_coeff(pur2)
+#' Calc_Gamma_coeffesp12(diag, iso1, iso2, res1, res2)
+#' # sans forcage
+#' Calc_Gamma_coeffesp12(diag, iso1, iso2, res1, res2, free=T)
 Calc_Gamma_coeffesp12 <- function(x, iso1, iso2, res1, res2, free=F)
 {
   # x = tableau dtoto des culture pure et associee avec Ytot, densite1, densite2, Yesp1, Yesp2, nbplt et surfsolref
@@ -126,8 +183,8 @@ Calc_Gamma_coeffesp12 <- function(x, iso1, iso2, res1, res2, free=F)
     maxis <- c(10.,1.,1.)
   }
 
-  #model1 <- nls(inv_Yi~Yresp_densite2(a ,beta, gamma, densite1, densite2), data=df, start=startlist ,trace=TRUE,algorithm="port",lower=minis,upper=maxis)
-  model1 <- nls(YEsp1~Yresp_densite2bis(a ,beta, gamma, densite1, densite2), data=df, start=startlist ,trace=TRUE,algorithm="port",lower=minis,upper=maxis)
+  #model1 <- nls(inv_Yi~Yresp_densite2_inv(a ,beta, gamma, densite1, densite2), data=df, start=startlist ,trace=TRUE,algorithm="port",lower=minis,upper=maxis)
+  model1 <- nls(YEsp1~Yresp_densite2(a ,beta, gamma, densite1, densite2), data=df, start=startlist ,trace=TRUE,algorithm="port",lower=minis,upper=maxis)
   parameters1 <- summary(model1)[["parameters"]]
   #yes! rq: forcage de a change pas grand chose
 
@@ -157,8 +214,8 @@ Calc_Gamma_coeffesp12 <- function(x, iso1, iso2, res1, res2, free=F)
     maxis <- c(10.,1.,1.)
   }
 
-  #model2 <- nls(inv_Yi~Yresp_densite2(a ,beta, gamma, densite1, densite2), data=df, start=startlist ,trace=TRUE,algorithm="port",lower=minis,upper=maxis)
-  model2 <- nls(YEsp1~Yresp_densite2bis(a ,beta, gamma, densite1, densite2), data=df, start=startlist ,trace=TRUE,algorithm="port",lower=minis,upper=maxis)
+  #model2 <- nls(inv_Yi~Yresp_densite2_inv(a ,beta, gamma, densite1, densite2), data=df, start=startlist ,trace=TRUE,algorithm="port",lower=minis,upper=maxis)
+  model2 <- nls(YEsp1~Yresp_densite2(a ,beta, gamma, densite1, densite2), data=df, start=startlist ,trace=TRUE,algorithm="port",lower=minis,upper=maxis)
   parameters2 <- summary(model2)[["parameters"]]
 
   res <- list(model1, model2, parameters1, parameters2)
@@ -174,6 +231,26 @@ Calc_Gamma_coeffesp12 <- function(x, iso1, iso2, res1, res2, free=F)
 
 
 
+
+
+#Yresp_densite2_diag <- function(a ,beta, gamma, dtot, densite1)
+#{
+#  # eq 2.4 - sackeville hamilton exprimee en reponse au Yespi a densite de deux espece
+#  # une seule variable dans dipositif de DeWit car dtot=cst (a forcer dans l'optimisation)
+#  inv_Yi = a + a*beta*densite1 + a*gamma*(dtot-densite1)
+#  inv_Yi
+#}
+#marche pas plus... seule sur diag
+
+
+
+
+
+
+
+#' Calculate Sij coefficients
+#'
+#' @export
 Calc_Sij_coefficients <- function(res1, res2, parameters1, parameters2)
 {
   # substitution rates Sij Eq 2.7
@@ -188,6 +265,9 @@ Calc_Sij_coefficients <- function(res1, res2, parameters1, parameters2)
 #Calc_Sij_coefficients(res1, res2, parameters1, parameters2)
 
 
+#' Calculate Eij coefficients
+#'
+#' @export
 Calc_Eij_coefficients <- function(res1, res2, parameters1, parameters2)
 {
   # relative competitive effect  Eij Eq 2.8
@@ -202,6 +282,9 @@ Calc_Eij_coefficients <- function(res1, res2, parameters1, parameters2)
 #Calc_Eij_coefficients(res1, res2, parameters1, parameters2)
 
 
+#' Calculate Rij coefficients
+#'
+#' @export
 Calc_Rij_coefficients <- function(res1, res2, parameters1, parameters2)
 {
   # relative competitive effect  Eij Eq 2.8
@@ -217,6 +300,13 @@ Calc_Rij_coefficients <- function(res1, res2, parameters1, parameters2)
 # R bien superieur a zero!
 
 
+
+
+
+
+#' Calculate Competition Intensity coefficients
+#'
+#' @export
 Calc_CompetitionIntensity<- function(YEsp1, densite1, iso_ind)
 {
   #calculate competition intensity relative to isolated plant of sp (with vectors Yesp and density)
@@ -231,6 +321,10 @@ Calc_CompetitionIntensity<- function(YEsp1, densite1, iso_ind)
 #Calc_CompetitionIntensity(x$YEsp1, x$densite1, iso1$YEsp1/iso1$densite1)
 #Calc_CompetitionIntensity(x$YEsp2, x$densite2, iso2$YEsp2/iso2$densite2)
 
+
+#' Calculate RCI coefficients
+#'
+#' @export
 Calc_RCI_coeff <- function(YEsp1, densite1, iso_ind)
 {
   # Relative compeition index (Maamouri et al2017)
@@ -257,7 +351,9 @@ Calc_RCI_coeff <- function(YEsp1, densite1, iso_ind)
 
 
 
-
+#' Calculate Loreau's CEi coefficient
+#'
+#' @export
 Calc_CEi <- function(Nb,M,deltaRY)
 {
   #complementarity effect (Hector et Loreau, 2001)
@@ -268,6 +364,10 @@ Calc_CEi <- function(Nb,M,deltaRY)
   CEi
 }
 
+
+#' Calculate Loreau's SEi coefficient
+#'
+#' @export
 Calc_SEi <- function(Nb,M,deltaRY)
 {
   #selection effect (Hector et Loreau, 2001)
@@ -279,6 +379,9 @@ Calc_SEi <- function(Nb,M,deltaRY)
 }
 
 
+#' Calculate Loreau's CEi and SEi coefficient for a diagonal
+#'
+#' @export
 Calc_CESE_diag <- function(diag)
 {
   #calculate CE and SE coeffcicient (Hector et Loreau 2001)

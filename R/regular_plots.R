@@ -69,7 +69,21 @@ Plot2D_soilVar <- function(dat, var_='FTSW', epcouche=5., Boundarycols = c("blue
 #
 #####################
 
-
+#' Plot single species response to density
+#'
+#' @param x A dtoto data.frame of the pure species containing Ytot, densite, nbplt and surfsolref vectors
+#' @param res The result of a fit with Calc_Beta_coeff function
+#' @return A plot of single species response to density with its fit
+#' @export
+#' @examples
+#' dtoto <- tabtoto_compet
+#' sp_dtoto <- split(dtoto, dtoto$keysc)
+#' key <-"88-1 Fix2-nonFixSimTest Lusignan30IrrN2 -"
+#' keypur <- "88-1 nonFixSimTest-nonFixSimTest Lusignan30IrrN2 -"
+#' dat <- rbind(sp_dtoto[[key]], sp_dtoto[[keypur]])
+#' pur1 <- dat[dat$densite2 == 0., ]
+#' res1 <- Calc_Beta_coeff(pur1)
+#' Plt_Yresp_densite1(pur1, res1, main="", xlab="densite 1", ylab="Ytot")
 Plt_Yresp_densite1 <- function(x, res, ...)
 {
   #plot de la reponse a la densite d'une espece pure avec le coeff beta
@@ -87,7 +101,31 @@ Plt_Yresp_densite1 <- function(x, res, ...)
 }
 
 
-
+#' Plot two species response to density on the diagonal of density dmax
+#'
+#' @param x A dtoto data.frame of the mixed species containing Ytot, densite1, densite2, Yesp1, Yesp2, nbplt and surfsolref vectors
+#' @param parameters1 The result of a fit with Calc_Beta_coeff function
+#' @param parameters2 The result of a fit with Calc_Beta_coeff function
+#' @param dmax Density of the diagonal
+#' @return A plot of two species response to density with its fit on a diagonal of density
+#' @export
+#' @examples
+#' dtoto <- tabtoto_compet
+#' sp_dtoto <- split(dtoto, dtoto$keysc)
+#' key <-"88-1 Fix2-nonFixSimTest Lusignan30IrrN2 -"
+#' keypur <- "88-1 nonFixSimTest-nonFixSimTest Lusignan30IrrN2 -"
+#' dat <- rbind(sp_dtoto[[key]], sp_dtoto[[keypur]])
+#' pur1 <- dat[dat$densite2 == 0., ]
+#' pur2 <- dat[dat$densite1 == 0., ]
+#' diag <- dat[dat$densite == 400., ]
+#' iso1 <- pur1[pur1$densite ==min(pur1$densite) , ]
+#' iso2 <- pur2[pur2$densite ==min(pur2$densite) , ]
+#' res1 <- Calc_Beta_coeff(pur1)
+#' res2 <- Calc_Beta_coeff(pur2)
+#' resg <- Calc_Gamma_coeffesp12(diag, iso1, iso2, res1, res2)
+#' parameters1 <- resg[["parameters1"]]
+#' parameters2 <- resg[["parameters2"]]
+#' Plot_diag_respFitsd1d2(diag, parameters1, parameters2, dmax=400.)
 Plot_diag_respFitsd1d2 <- function(x, parameters1, parameters2, dmax=400., ...)
 {
   # Plot des ajustement de gamma sur une diagonale de dispositif de deWit (substitution)
@@ -97,12 +135,12 @@ Plot_diag_respFitsd1d2 <- function(x, parameters1, parameters2, dmax=400., ...)
   points(x$densite1, x$YEsp1, col=2)
   points(x$densite1, x$YEsp2, col=4)
 
-  vals <- Yresp_densite2(a = parameters1[1], beta=parameters1[2], gamma=parameters1[3], densite1=seq(0,dmax,1.), densite2=rev(seq(0,dmax,1.)))
+  vals <- Yresp_densite2_inv(a = parameters1[1], beta=parameters1[2], gamma=parameters1[3], densite1=seq(0,dmax,1.), densite2=rev(seq(0,dmax,1.)))
   Yesp1 <- (1/vals)*seq(0,dmax,1.)
   lines(seq(0,dmax,1.), Yesp1, type='l',col=2)
   #OK!!
 
-  vals2 <- Yresp_densite2(a = parameters2[1], beta=parameters2[2], gamma=parameters2[3], densite1=rev(seq(0,dmax,1.)), densite2=seq(0,dmax,1.))
+  vals2 <- Yresp_densite2_inv(a = parameters2[1], beta=parameters2[2], gamma=parameters2[3], densite1=rev(seq(0,dmax,1.)), densite2=seq(0,dmax,1.))
   Yesp2 <- (1/vals2)*rev(seq(0,dmax,1.))
   lines(seq(0,dmax,1.), Yesp2, type='l',col=4)
 
@@ -114,6 +152,33 @@ Plot_diag_respFitsd1d2 <- function(x, parameters1, parameters2, dmax=400., ...)
 #Plot_diag_respFitsd1d2(x, parameters1, parameters2, dmax=400.)
 
 
+
+#' Plot two species response to density on the one-one diagonal
+#'
+#' @param x A dtoto data.frame of the mixed species containing Ytot, densite1, densite2, Yesp1, Yesp2, nbplt and surfsolref vectors
+#' @param parameters1 The result of a fit with Calc_Beta_coeff function
+#' @param parameters2 The result of a fit with Calc_Beta_coeff function
+#' @param dmax Density
+#' @return A plot of two species response to density with its fit on the one-one diagonal at various densities
+#' @export
+#' @examples
+#' dtoto <- tabtoto_compet
+#' sp_dtoto <- split(dtoto, dtoto$keysc)
+#' key <-"88-1 Fix2-nonFixSimTest Lusignan30IrrN2 -"
+#' keypur <- "88-1 nonFixSimTest-nonFixSimTest Lusignan30IrrN2 -"
+#' dat <- rbind(sp_dtoto[[key]], sp_dtoto[[keypur]])
+#' pur1 <- dat[dat$densite2 == 0., ]
+#' pur2 <- dat[dat$densite1 == 0., ]
+#' diag <- dat[dat$densite == 400., ]
+#' iso1 <- pur1[pur1$densite ==min(pur1$densite) , ]
+#' iso2 <- pur2[pur2$densite ==min(pur2$densite) , ]
+#' res1 <- Calc_Beta_coeff(pur1)
+#' res2 <- Calc_Beta_coeff(pur2)
+#' resg <- Calc_Gamma_coeffesp12(one_one, iso1, iso2, res1, res2)
+#' parameters1 <- resg[["parameters1"]]
+#' parameters2 <- resg[["parameters2"]]
+#' Plot_OneOne_Resp_dtot(one_one, parameters1, parameters2, dmax=400.)
+#' Plot_OneOne_prop(one_one, parameters1, parameters2, dmax=400.)
 Plot_OneOne_Resp_dtot <- function(x, parameters1, parameters2, dmax=400., ...)
 {
   # Plot des ajustement de gamma sur la diagonale 1:1 (50/50 semis) (additif) - pour Ytot
@@ -121,22 +186,47 @@ Plot_OneOne_Resp_dtot <- function(x, parameters1, parameters2, dmax=400., ...)
 
   plot(x$densite1+x$densite2, x$Ytot, ...)#ylim=c(0,2300), main=titre, xlim=c(0, max(x$densite1+x$densite2)))
 
-  vals <- Yresp_densite2(a = parameters1[1], beta=parameters1[2], gamma=parameters1[3], densite1=seq(0,dmax,1.), densite2=seq(0,dmax,1.))
+  vals <- Yresp_densite2_inv(a = parameters1[1], beta=parameters1[2], gamma=parameters1[3], densite1=seq(0,dmax,1.), densite2=seq(0,dmax,1.))
   Yesp1 <- (1/vals)*seq(0,dmax,1.)
   #lines(seq(0,400,1.)*2, Yesp1, type='l',col=2)
 
-  vals2 <- Yresp_densite2(a = parameters2[1], beta=parameters2[2], gamma=parameters2[3], densite1=seq(0,dmax,1.), densite2=seq(0,dmax,1.))
+  vals2 <- Yresp_densite2_inv(a = parameters2[1], beta=parameters2[2], gamma=parameters2[3], densite1=seq(0,dmax,1.), densite2=seq(0,dmax,1.))
   Yesp2 <- (1/vals2)*seq(0,dmax,1.)
 
   Ytot <- Yesp1+Yesp2
   lines(seq(0,dmax,1.)*2, Ytot, type='l')
 }
 #Plot_OneOne_Resp_dtot(x, parameters1, parameters2, dmax=400.)
-
 #lines(seq(0,400,1.)*2, Ytot-Yesp1, type='l',col=4)
 
 
 
+#' Plot two species response to density on the one-one diagonal for species proportions
+#'
+#' @param x A dtoto data.frame of the mixed species containing Ytot, densite1, densite2, Yesp1, Yesp2, nbplt and surfsolref vectors
+#' @param parameters1 The result of a fit with Calc_Beta_coeff function
+#' @param parameters2 The result of a fit with Calc_Beta_coeff function
+#' @param dmax Density
+#' @return A plot of two species response to density with its fit on the one-one diagonal at various densities for species proportions
+#' @export
+#' @examples
+#' dtoto <- tabtoto_compet
+#' sp_dtoto <- split(dtoto, dtoto$keysc)
+#' key <-"88-1 Fix2-nonFixSimTest Lusignan30IrrN2 -"
+#' keypur <- "88-1 nonFixSimTest-nonFixSimTest Lusignan30IrrN2 -"
+#' dat <- rbind(sp_dtoto[[key]], sp_dtoto[[keypur]])
+#' pur1 <- dat[dat$densite2 == 0., ]
+#' pur2 <- dat[dat$densite1 == 0., ]
+#' diag <- dat[dat$densite == 400., ]
+#' iso1 <- pur1[pur1$densite ==min(pur1$densite) , ]
+#' iso2 <- pur2[pur2$densite ==min(pur2$densite) , ]
+#' res1 <- Calc_Beta_coeff(pur1)
+#' res2 <- Calc_Beta_coeff(pur2)
+#' resg <- Calc_Gamma_coeffesp12(one_one, iso1, iso2, res1, res2)
+#' parameters1 <- resg[["parameters1"]]
+#' parameters2 <- resg[["parameters2"]]
+#' Plot_OneOne_Resp_dtot(one_one, parameters1, parameters2, dmax=400.)
+#' Plot_OneOne_prop(one_one, parameters1, parameters2, dmax=400.)
 Plot_OneOne_prop <- function(x, parameters1, parameters2, dmax=400., ...)
 {
   # Plot des ajustement de gamma sur la diagonale 1:1 (50/50 semis) (additif) - pour proportions d'especes
@@ -163,7 +253,9 @@ Plot_OneOne_prop <- function(x, parameters1, parameters2, dmax=400., ...)
 
 
 
-
+#' Plot Loreau's CEi and SEi coefficient for a diagonal
+#'
+#' @export
 Plot_resCE_SE <- function(resCE_SE, ...)
 {
   #faire le plot - CE-SE (indices Loreau) pour une diag
@@ -200,7 +292,9 @@ Plot_resCE_SE <- function(resCE_SE, ...)
 
 ############## palettes
 
-
+#' palette of 100 colors
+#'
+#' @export
 col100 <- function(valrel100, lscols)
 {
   #pour gestion des couleur: vecteur 100
