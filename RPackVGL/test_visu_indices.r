@@ -1,6 +1,8 @@
 
 #library(TeachingDemos)# {for subplot function}
 
+#library(RPackVGL)
+
 # pour vignette test des indices
 
 

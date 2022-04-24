@@ -13,6 +13,7 @@
 #' @param epcouche Soil voxel (cm)
 #' @param Boundarycols A vector of two color names defining the extremes of the gradient of values
 #' @return 2D spatio-temporal plot of soil variables from the outHR file
+#' @export
 #' @examples
 #' dat <- outHR_0
 #' Plot2D_soilVar(dat, var_='FTSW')

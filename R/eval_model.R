@@ -11,6 +11,7 @@
 #' @param O An observed vector of values
 #' @param P A vector of values predicted by a model
 #' @return The Root Mean Square Error between \code{O} and \code{P}
+#' @export
 #' @examples
 #' obs <- c(1, 2, 3, 5)
 #' sim <- c(0.9, 2.2, 3.1, 5)
@@ -26,6 +27,7 @@ rmse <- function(O,P){
 #' @param O An observed vector of values
 #' @param P A vector of values predicted by a model
 #' @return The systematic Root Mean Square Error between \code{O} and \code{P}
+#' @export
 #' @examples
 #' obs <- c(1, 2, 3, 5)
 #' sim <- c(0.9, 2.2, 3.1, 5)
@@ -54,6 +56,7 @@ rmsesCoucheney=function(O,P){
 #' @param O An observed vector of values
 #' @param P A vector of values predicted by a model
 #' @return The unsystematic Root Mean Square Error between \code{O} and \code{P}
+#' @export
 #' @examples
 #' obs <- c(1, 2, 3, 5)
 #' sim <- c(0.9, 2.2, 3.1, 5)
@@ -81,6 +84,7 @@ rmseuCoucheney=function(O,P){
 #' @param O An observed vector of values
 #' @param P A vector of values predicted by a model
 #' @return The relative Root Mean Square Error between \code{O} and \code{P} to the mean of observed values
+#' @export
 #' @examples
 #' obs <- c(1, 2, 3, 5)
 #' sim <- c(0.9, 2.2, 3.1, 5)
