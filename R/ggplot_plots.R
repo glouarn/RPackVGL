@@ -1,9 +1,9 @@
 
 
-
-
-
-#fonction graph ggplot2
+##############
+## ggplot2 derived plot functions
+##
+##############
 
 
 
@@ -51,7 +51,28 @@ gg_plotsim <- function(varsim, simmoy, simsd, name="", col="blue", colref="red")
 
 
 
-
+#' Add observed points to an existing plot of simulation (plotsim)
+#'
+#' @export
+#'
+#' @examples
+#' ltoto <- ltoto_exemple
+#' simmoy <- build_simmoy(ltoto, lsusm=names(ltoto))
+#' simsd <- build_simmoy(ltoto, lsusm=names(ltoto), optSD = T)
+#' plt_test <- gg_plotsim("NBI", simmoy, simsd, name="test")
+#'
+#' # resize obs data.frame to the dim of simmoy
+#' obsOK <- obs_exemple[obs_exemple$DOY %in% simmoy$STEPS,]
+#' obsMerge <- simmoy[,c("STEPS","TT")]
+#' names(obsMerge)[1] <- "DOY"
+#' obsMerge <- merge(obsMerge, obsOK, by="DOY",all=T)
+#'
+#' #corresponding names in sim/obs data.frames
+#' corresp <- data.frame(sim=c("NBI","LAI","MSA"), obs=c("NBI-quart","surf_tot","MSaerien"))
+#'
+#' #add obs points to plot
+#' plt_test <- gg_addplotobs(plt_test, "NBI", obsMerge, corresp)
+#' plt_test
 gg_addplotobs <- function(plot_var, var_, obsOK, corresp, colobs="red")
 {
   # ajour a un graph simule des points observe pour variable var_
@@ -63,10 +84,35 @@ gg_addplotobs <- function(plot_var, var_, obsOK, corresp, colobs="red")
   plot_var2
 }
 #gg_addplotobs(ls_plt[["MSA"]], "MSA", obsMerge, corresp)
+# adapter pour rendre optionel corresp?
+# adapter pour internaliser mise en forme obsOK a bonne dimension?
 
 
 
 
+#' Plotting simulation outputs versus observations
+#'
+#' @export
+#'
+#' @examples
+#' ltoto <- ltoto_exemple
+#' simmoy <- build_simmoy(ltoto, lsusm=names(ltoto))
+#'
+#' # resize obs data.frame to the dim of simmoy
+#' obsOK <- obs_exemple[obs_exemple$DOY %in% simmoy$STEPS,]
+#' obsMerge <- simmoy[,c("STEPS","TT")]
+#' names(obsMerge)[1] <- "DOY"
+#' obsMerge <- merge(obsMerge, obsOK, by="DOY",all=T)
+#'
+#' #corresponding names in sim/obs data.frames
+#' corresp <- data.frame(sim=c("NBI","LAI","MSA"), obs=c("NBI-quart","surf_tot","MSaerien"))
+#'
+#' #plot
+#' var_ <- "NBI"
+#' nomvarobs <- as.character(corresp[corresp$sim==var_,c("obs")])
+#' obssim <- na.omit(data.frame(obs=simmoy[,var_], sim=obsMerge[,nomvarobs]))
+#' gg_plotObsSim(obssim, var_, name="test")
+#'
 gg_plotObsSim <- function(obssim, var_, name="", colpt="red")
 {
   #plot obs-sim avec ggplot
