@@ -1,0 +1,40 @@
+---
+title: "plot-sim"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{plot-sim}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(RPackVGL)
+```
+
+
+
+
+```{r }
+
+ltoto <- ltoto_exemple
+simmoy <- build_simmoy(ltoto, lsusm=names(ltoto))
+names(simmoy)
+
+obs <- obs_exemple
+obs
+
+```
+
+
+
+
+
+
+
