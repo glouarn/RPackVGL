@@ -287,10 +287,13 @@ Plot_resCE_SE <- function(resCE_SE, ...)
 
 
 
+#####################
+# color palettes
+#
+#
+#####################
 
 
-
-############## palettes
 
 #' palette of 100 colors
 #'
@@ -311,6 +314,100 @@ col100 <- function(valrel100, lscols)
   cols_ <- as.vector(cols_)
   cols_
 }
+
+
+
+
+#####################
+# plot for simulation reports
+#
+#
+#####################
+
+
+dynamic_graphs <- function(simmoy, name, obs=NULL, surfsolref=NULL)
+{
+  #serie de figure pour rapport dynamique d'une simulation Avec ou sans ajouts de points observe
+  #pour obs ajoute si dataframe fourni au format obs (teste morpholeg)
+
+  op <- par(mfrow = c(3,1), #lignes, colonnes
+            oma = c(5.,2.,3,0) + 0.1, #outer margins c(bottom, left, top, right)
+            mar = c(0,4,0,2) + 0.1) #marges internes a chaque compartiment c(bottom, left, top, right)
+
+
+  #1) Leaf area components
+  plot(simmoy$STEPS, simmoy$NBI, type='l', xlab='Time',ylab='Nb phytomere I', labels=F, ylim=c(0,1.5*max(simmoy$NBI)))
+  axis(2,labels=T) #remet tick labels y
+  title(main=name, outer=T)
+  if (!is.null(obs) & 'NBI' %in% names(obs))
+  {  points(obs$DOY, obs$NBI, pch=16) }
+
+
+  plot(simmoy$STEPS, simmoy$NBphyto, type='l', xlab='Time',ylab='Nb phytomere tot', labels=F, ylim=c(0,1.5*max(simmoy$NBphyto)))
+  axis(2,labels=T) #remet tick labels y
+  if (!is.null(obs) & 'nb_phyto_tot' %in% names(obs))
+  { points(obs$DOY, obs$nb_phyto_tot/surfsolref, pch=16) }
+
+
+  plot(simmoy$STEPS, simmoy$LAI, type='l', xlab='Time',ylab='LAI', labels=F, ylim=c(0,1.5*max(simmoy$LAI)))
+  axis(2,labels=T) #remet tick labels y
+  axis(1,labels=T) #remet tick labels x
+  title(xlab='DOY', outer=T)
+  if (!is.null(obs) & 'LAI' %in% names(obs))
+  { points(obs$DOY, obs$LAI, pch=16) }
+  if (!is.null(obs) & 'surf_tot' %in% names(obs))
+  { points(obs$DOY, obs$surf_tot/ (10000*surfsolref), pch=16) } #a reprendre fait 2 courbes actuellement pour eviter bug
+
+  #2)MS et taille
+  plot(simmoy$STEPS, -simmoy$RDepth, type='l', xlab='Time',ylab='RDepth', labels=F, ylim=c(-1.5*max(simmoy$RDepth),0))
+  axis(2,labels=T) #remet tick labels y
+  title(main=name, outer=T)
+  if (!is.null(obs) & 'long_pivot' %in% names(obs))
+  { points(obs$DOY, -obs$long_pivot, pch=16)}
+
+
+  plot(simmoy$STEPS, simmoy$Hmax, type='l', xlab='Time',ylab='Hmax', labels=F, ylim=c(0,1.5*max(simmoy$Hmax)))
+  axis(2,labels=T) #remet tick labels y
+  if (!is.null(obs) & 'Hmax' %in% names(obs))
+  { points(obs$DOY, obs$Hmax, pch=16) }
+
+  plot(simmoy$STEPS, simmoy$MSA, type='l', xlab='Time',ylab='MS', labels=F, ylim=c(0,1.5*max(simmoy$MSA)))
+  axis(2,labels=T) #remet tick labels y
+  axis(1,labels=T) #remet tick labels x
+  title(xlab='DOY', outer=T)
+  points(simmoy$STEPS, simmoy$MSrac, type='l', lty=2)
+  if (!is.null(obs) & 'MSaerien' %in% names(obs) & 'MSroot_tot' %in% names(obs))
+  {
+    points(obs$DOY, obs$MSaerien/surfsolref, pch=16)
+    points(obs$DOY, obs$MSroot_tot/surfsolref)
+  }
+
+
+  #3) fonctions de stress
+  plot(simmoy$STEPS, simmoy$FTSW, type='l', xlab='Time',ylab='FTSW', labels=F, ylim=c(0,1.1))
+  axis(2,labels=T) #remet tick labels y
+  title(main=name, outer=T)
+
+  plot(simmoy$STEPS, simmoy$NNI, type='l', xlab='Time',ylab='NNI', labels=F, ylim=c(0, 1.2*max(simmoy$NNI)))
+  axis(2,labels=T) #remet tick labels y
+
+  plot(simmoy$STEPS, simmoy$R_DemandC_Root, type='l', xlab='Time',ylab='R_DemandC_Root', labels=F, ylim=c(0,1.1))
+  axis(2,labels=T) #remet tick labels y
+  axis(1,labels=T) #remet tick labels x
+  title(xlab='DOY', outer=T)
+}
+#dynamic_graphs(simmoy, onglet, obs, surfsolref)
+
+#sans points d'obsevation
+#dynamic_graphs(simmoy, name=names(ltoto)[1])
+
+#avec points d'observation...
+#namexl <- "morpholeg14_obs.xls"
+#onglet <- "morpholeg14_ISO_timbale"
+#obs <- read_excel(paste(pathobs,namexl,sep="\\"), sheet = onglet, col_names = TRUE, na = "")
+#dynamic_graphs(simmoy, name=names(ltoto)[1], obs=obs, surfsolref=1)
+
+
 
 
 

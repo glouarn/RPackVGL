@@ -16,6 +16,7 @@ knitr::opts_chunk$set(
 
 ```{r setup}
 library(RPackVGL)
+library(ggplot2)
 ```
 
 
@@ -23,12 +24,27 @@ library(RPackVGL)
 
 ```{r }
 
+##### import test data
 ltoto <- ltoto_exemple
-simmoy <- build_simmoy(ltoto, lsusm=names(ltoto))
-names(simmoy)
+#ltoto
 
 obs <- obs_exemple
-obs
+#obs
+
+
+##### moyennes des graines simulees
+
+simmoy <- build_simmoy(ltoto, lsusm=names(ltoto))
+simsd <- build_simmoy(ltoto, lsusm=names(ltoto), optSD = T)
+names(simmoy)
+
+
+### test de plot
+
+#gg_plotsim("LAI", simmoy, simsd, name="test")
+
+
+
 
 ```
 

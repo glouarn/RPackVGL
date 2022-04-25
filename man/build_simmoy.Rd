@@ -2,7 +2,7 @@
 % Please edit documentation in R/read_mef.R
 \name{build_simmoy}
 \alias{build_simmoy}
-\title{Calculate the the average or standard deviation of a series of simulations for a set of predefined variables ()}
+\title{Calculate the the average or standard deviation of a series of simulations for a set of predefined variables}
 \usage{
 build_simmoy(ltoto, lsusm, esp = NA, optSD = F)
 }
@@ -19,7 +19,7 @@ build_simmoy(ltoto, lsusm, esp = NA, optSD = F)
 A simmoy data.frame with variables : STEPS, TT, NBI, NBphyto, LAI, MSA, MSArec, MSAnonrec, MSpiv, MSracfine, MSrac, RDepth, Hmax, FTSW, NNI, R_DemandC_Root, cutNB, Npc_aer, Ndfa, Epsi, NBsh
 }
 \description{
-Calculate the the average or standard deviation of a series of simulations for a set of predefined variables ()
+Calculate the the average or standard deviation of a series of simulations for a set of predefined variables
 }
 \examples{
 ltoto <- ltoto_exemple

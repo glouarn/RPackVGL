@@ -8,7 +8,6 @@
 #' @param opt_Fert optional parameter, displays dates and quantity of fertilizers used when activated
 #'
 #' @return A graph showing the dynamics of the selected output variable
-#' @export
 #'
 #' @importFrom ggplot2 aes scale_x_continuous scale_y_continuous geom_line ggtitle geom_text geom_point sec_axis geom_col labs element_line element_blank element_text theme theme_bw
 #' @importFrom hrbrthemes theme_ipsum
@@ -21,7 +20,7 @@ utils::globalVariables(c("STEPS", "FertNH4_DOY", "hcut", "FertNO3_DOY", "FertNH4
 
 
 
-gg_plotsim <- function(varsim, simmoy,onglet,coeff = 1, opt_cut = NULL, opt_Irrig = NULL, opt_Fert = NULL) {
+gg_plotsim_mayssa <- function(varsim, simmoy,onglet,coeff = 1, opt_cut = NULL, opt_Irrig = NULL, opt_Fert = NULL) {
   var_ <- varsim
   min <- 0
   max <- 1.5*max(simmoy[,var_])
