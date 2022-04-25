@@ -18,6 +18,7 @@
 #' @param colref Color...
 #'
 #' @return A graph showing the dynamics of the selected output variable
+#' @export
 #'
 #' @examples
 #' ltoto <- ltoto_exemple
@@ -131,4 +132,6 @@ Concat_ggplot_layers <- function(ls_pltsim, layertype = "GeomLine")
   p
 }
 #p <- Concat_ggplot_layers(ls_pltsim_ID, layertype = "GeomLine")
+
+
 

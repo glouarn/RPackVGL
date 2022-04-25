@@ -41,9 +41,17 @@ names(simmoy)
 
 ### test de plot
 
-#gg_plotsim("LAI", simmoy, simsd, name="test")
+gg_plotsim("LAI", simmoy, simsd, name="test")
 
 
+
+### construire la liste des graphs pour ttes les variables
+
+
+### visu multi-panneau
+
+
+### ajout de points observes
 
 
 ```

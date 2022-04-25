@@ -2,7 +2,7 @@
 % Please edit documentation in R/read_mef.R
 \name{read_ltoto}
 \alias{read_ltoto}
-\title{This function reads the content of the simulation file "toto" of a series of USM and stocks the output into a list}
+\title{This function reads the content of the simulation file "toto" of a series of USM and stocks the dynamic daily output into a list}
 \usage{
 read_ltoto(ls_toto)
 }
@@ -13,7 +13,7 @@ read_ltoto(ls_toto)
 A list of data frames. Each element of this list correspond to the simulation output of a single USM
 }
 \description{
-This function reads the content of the simulation file "toto" of a series of USM and stocks the output into a list
+This function reads the content of the simulation file "toto" of a series of USM and stocks the dynamic daily output into a list
 }
 \examples{
 path_ltoto1 <- system.file("extdata", "toto_6129_l-egume_Orca-Orca_homogeneous0_scenario12-12_DigitLuz10LD_0_DigitLuz10_-_.csv", package = "RPackVGL")
