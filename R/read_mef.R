@@ -441,35 +441,140 @@ build_simmoy <- function(ltoto, lsusm, esp=NA, optSD=F)
   STEPS <- dat[dat$V1=='TT',2]
   nbplt <- length(dat)-2
   surfsolref <- dat[dat$V1=='pattern',3] #m2
+  ls_varOUT <- unique(dat$V1)
 
-  LAI <- moysimval(ltoto, lsusm, var='SurfPlante', esp, optSD)/ surfsolref
-  MSA <- moysimval(ltoto,lsusm, var='MSaerien', esp, optSD)/ surfsolref
-  MSArec <- moysimval(ltoto,lsusm, var='MSaerienRec', esp, optSD)/ surfsolref
-  MSAnonrec <- moysimval(ltoto,lsusm, var='MSaerienNonRec', esp, optSD)/ surfsolref
-  MSpiv <- moysimval(ltoto,lsusm, var='MS_pivot', esp, optSD)/ surfsolref
-  MSracfine <- moysimval(ltoto,lsusm, var='MS_rac_fine', esp, optSD)/ surfsolref
-  MSrac <- MSpiv + MSracfine
-  NBI <- moysimval(ltoto,lsusm, var='NBI', esp, optSD)/ nbplt
-  NBI <- pmax(0, NBI - 0.75) #correction des simuls pour les comptages decimaux
+  # TT et STEPS variables obligatoires
+  simmoy <- data.frame(STEPS, TT)
+
+  if ('SurfPlante' %in% ls_varOUT)
+  { simmoy$LAI <- moysimval(ltoto, lsusm, var='SurfPlante', esp, optSD)/ surfsolref }
+  if ('MSaerien' %in% ls_varOUT)
+  { simmoy$MSA <- moysimval(ltoto,lsusm, var='MSaerien', esp, optSD)/ surfsolref }
+  if ('MSaerienRec' %in% ls_varOUT)
+  { simmoy$MSArec <- moysimval(ltoto,lsusm, var='MSaerienRec', esp, optSD)/ surfsolref }
+  if ('MSaerienNonRec' %in% ls_varOUT)
+  { simmoy$MSAnonrec <- moysimval(ltoto,lsusm, var='MSaerienNonRec', esp, optSD)/ surfsolref}
+  if ('MS_pivot' %in% ls_varOUT)
+  { simmoy$MSpiv <- moysimval(ltoto,lsusm, var='MS_pivot', esp, optSD)/ surfsolref }
+  if ('MS_rac_fine' %in% ls_varOUT)
+  { simmoy$MSracfine <- moysimval(ltoto,lsusm, var='MS_rac_fine', esp, optSD)/ surfsolref}
+  if ('MS_pivot' %in% ls_varOUT & 'MS_rac_fine' %in% ls_varOUT)
+  {  simmoy$MSrac <- simmoy$MSpiv + simmoy$MSracfine }
+
+  if ('NBI' %in% ls_varOUT)
+  {
+    NBI <- moysimval(ltoto,lsusm, var='NBI', esp, optSD)/ nbplt
+    simmoy$NBI <- pmax(0, NBI - 0.75) #correction des simuls pour les comptages decimaux
+  }
   #NBIquart <- quantsimval(ltoto,lsusm, var_='NBI',esp=esp)
-  NBphyto <- moysimval(ltoto, lsusm, var='NBphyto', esp, optSD)/ surfsolref
-  Nbapex <- moysimval(ltoto, lsusm, var='NBapexAct', esp, optSD)/ surfsolref
-  NBphyto <- pmax(0,NBphyto - 0.5*Nbapex) #correction simuls pour les comptages decimaux
-  NBsh <- moysimval(ltoto, lsusm, var='NBsh', esp, optSD)/ surfsolref
 
-  RDepth <- moysimval(ltoto,lsusm, var='RDepth', esp, optSD)/ nbplt
-  Hmax <- moysimval(ltoto,lsusm, var='Hplante', esp, optSD)/ nbplt
-  FTSW <- moysimval(ltoto,lsusm, var='FTSW', esp, optSD)/ nbplt
-  NNI <- moysimval(ltoto,lsusm, var='NNI', esp, optSD)/ nbplt
-  R_DemandC_Root <- moysimval(ltoto,lsusm, var='R_DemandC_Root', esp, optSD)/ nbplt
-  cutNB <- moysimval(ltoto,lsusm, var='cutNB', esp, optSD)/ nbplt
-  Npc_aer <- moysimval(ltoto,lsusm, var='Npc_aer', esp, optSD)/ nbplt
-  Ndfa <- moysimval(ltoto,lsusm, var='Ndfa', esp, optSD)/ nbplt
-  Epsi <- moysimval(ltoto,lsusm, var='epsi', esp, optSD)
+  if ('NBphyto' %in% ls_varOUT)
+  { simmoy$NBphyto <- moysimval(ltoto, lsusm, var='NBphyto', esp, optSD)/ surfsolref}
+  if ('NBapexAct' %in% ls_varOUT)
+  { simmoy$Nbapex <- moysimval(ltoto, lsusm, var='NBapexAct', esp, optSD)/ surfsolref }
+  if ('NBphyto' %in% ls_varOUT & 'NBapexAct' %in% ls_varOUT)
+  { simmoy$NBphyto <- pmax(0,simmoy$NBphyto - 0.5*simmoy$Nbapex) }
+  #correction simuls pour les comptages decimaux
 
-  simmoy <- data.frame(STEPS, TT, NBI, NBphyto, LAI, MSA, MSArec, MSAnonrec, MSpiv, MSracfine, MSrac, RDepth, Hmax, FTSW, NNI, R_DemandC_Root, cutNB, Npc_aer,Ndfa,Epsi,NBsh)
+  if ('NBsh' %in% ls_varOUT)
+  { simmoy$NBsh <- moysimval(ltoto, lsusm, var='NBsh', esp, optSD)/ surfsolref}
+  if ('RDepth' %in% ls_varOUT)
+  { simmoy$RDepth <- moysimval(ltoto,lsusm, var='RDepth', esp, optSD)/ nbplt}
+  if ('Hplante' %in% ls_varOUT)
+  { simmoy$Hmax <- moysimval(ltoto,lsusm, var='Hplante', esp, optSD)/ nbplt}
+  if ('FTSW' %in% ls_varOUT)
+  { simmoy$FTSW <- moysimval(ltoto,lsusm, var='FTSW', esp, optSD)/ nbplt}
+  if ('NNI' %in% ls_varOUT)
+  { simmoy$NNI <- moysimval(ltoto,lsusm, var='NNI', esp, optSD)/ nbplt}
+  if ('R_DemandC_Root' %in% ls_varOUT)
+  { simmoy$R_DemandC_Root <- moysimval(ltoto,lsusm, var='R_DemandC_Root', esp, optSD)/ nbplt}
+  if ('cutNB' %in% ls_varOUT)
+  { simmoy$cutNB <- moysimval(ltoto,lsusm, var='cutNB', esp, optSD)/ nbplt}
+  if ('Npc_aer' %in% ls_varOUT)
+  {
+    simmoy$Npc_aer <- moysimval(ltoto,lsusm, var='Npc_aer', esp, optSD)/ nbplt
+    #!! reprendre et ponderer par biomasse aerienne!!
+  }
+  if ('Ndfa' %in% ls_varOUT)
+  {
+    simmoy$Ndfa <- moysimval(ltoto,lsusm, var='Ndfa', esp, optSD)/ nbplt
+    #!! reprendre et ponderer par biomasse aerienne!!
+  }
+  if ('epsi' %in% ls_varOUT)
+  { simmoy$Epsi <- moysimval(ltoto,lsusm, var='epsi', esp, optSD)}
+
+
   simmoy
-}#version revue par Lucas tient cmpte du nom de l'espece dans les assos
 
+}
+#version revue par Lucas tient cmpte du nom de l'espece dans les assos
 #simmoy <- build_simmoy(ltoto, lsusm=names(ltoto))
 #simmoy <- build_simmoy(ltoto, lsusm=names(ltoto), esp="timbale")
+
+
+
+
+
+# build_simmoy_old <- function(ltoto, lsusm, esp=NA, optSD=F)
+# {
+#   #moy des simul des differentes graines d'un meme usm avec moysimval (pour variables dynamiques)
+#
+#   #recup info generale sur la premier usm
+#   #dat <- ltoto[[lsusm[1]]]
+#   if (is.na(esp))
+#   {dat <- ltoto[[lsusm[1]]]
+#   } else
+#   {
+#     #garde uniquement col esp
+#     nomcol <- names(ltoto[[lsusm[1]]])
+#     idcols <- grepl(esp, nomcol)
+#     dat <- cbind(ltoto[[lsusm[1]]][,c(1:2)], ltoto[[lsusm[1]]][,idcols])
+#   }
+#
+#   TT <- dat[dat$V1=='TT',3] #peut changer selon les plantes!
+#   STEPS <- dat[dat$V1=='TT',2]
+#   nbplt <- length(dat)-2
+#   surfsolref <- dat[dat$V1=='pattern',3] #m2
+#
+#   LAI <- moysimval(ltoto, lsusm, var='SurfPlante', esp, optSD)/ surfsolref
+#   MSA <- moysimval(ltoto,lsusm, var='MSaerien', esp, optSD)/ surfsolref
+#   MSArec <- moysimval(ltoto,lsusm, var='MSaerienRec', esp, optSD)/ surfsolref
+#   MSAnonrec <- moysimval(ltoto,lsusm, var='MSaerienNonRec', esp, optSD)/ surfsolref
+#   MSpiv <- moysimval(ltoto,lsusm, var='MS_pivot', esp, optSD)/ surfsolref
+#   MSracfine <- moysimval(ltoto,lsusm, var='MS_rac_fine', esp, optSD)/ surfsolref
+#   MSrac <- MSpiv + MSracfine
+#   NBI <- moysimval(ltoto,lsusm, var='NBI', esp, optSD)/ nbplt
+#   NBI <- pmax(0, NBI - 0.75) #correction des simuls pour les comptages decimaux
+#   #NBIquart <- quantsimval(ltoto,lsusm, var_='NBI',esp=esp)
+#   NBphyto <- moysimval(ltoto, lsusm, var='NBphyto', esp, optSD)/ surfsolref
+#   Nbapex <- moysimval(ltoto, lsusm, var='NBapexAct', esp, optSD)/ surfsolref
+#   NBphyto <- pmax(0,NBphyto - 0.5*Nbapex) #correction simuls pour les comptages decimaux
+#   NBsh <- moysimval(ltoto, lsusm, var='NBsh', esp, optSD)/ surfsolref
+#
+#   RDepth <- moysimval(ltoto,lsusm, var='RDepth', esp, optSD)/ nbplt
+#   Hmax <- moysimval(ltoto,lsusm, var='Hplante', esp, optSD)/ nbplt
+#   FTSW <- moysimval(ltoto,lsusm, var='FTSW', esp, optSD)/ nbplt
+#   NNI <- moysimval(ltoto,lsusm, var='NNI', esp, optSD)/ nbplt
+#   R_DemandC_Root <- moysimval(ltoto,lsusm, var='R_DemandC_Root', esp, optSD)/ nbplt
+#   cutNB <- moysimval(ltoto,lsusm, var='cutNB', esp, optSD)/ nbplt
+#   Npc_aer <- moysimval(ltoto,lsusm, var='Npc_aer', esp, optSD)/ nbplt
+#   Ndfa <- moysimval(ltoto,lsusm, var='Ndfa', esp, optSD)/ nbplt
+#   Epsi <- moysimval(ltoto,lsusm, var='epsi', esp, optSD)
+#
+#   simmoy <- data.frame(STEPS, TT, NBI, NBphyto, LAI, MSA, MSArec, MSAnonrec, MSpiv, MSracfine, MSrac, RDepth, Hmax, FTSW, NNI, R_DemandC_Root, cutNB, Npc_aer,Ndfa,Epsi,NBsh)
+#   simmoy
+# }#version revue par Lucas tient cmpte du nom de l'espece dans les assos
+#
+# #simmoy <- build_simmoy(ltoto, lsusm=names(ltoto))
+# #simmoy <- build_simmoy(ltoto, lsusm=names(ltoto), esp="timbale")
+# #a revoir avec liste de variables a checker + test pour rendre plus plastique
+#
+
+
+
+
+
+
+
+
+

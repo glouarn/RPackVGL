@@ -156,7 +156,9 @@ gg_plotObsSim <- function(obssim, var_, name="", colpt="red")
 
 
 
-
+#' Add different ggplot layers into the same plot
+#'
+#' @export
 Concat_ggplot_layers <- function(ls_pltsim, layertype = "GeomLine")
 {
   # function avec une liste de ggplot similaires et ajoute dans le premier

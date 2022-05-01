@@ -52,10 +52,20 @@ names(ltoto_exemple) <- c("toto_6129_l-egume_Orca-Orca_homogeneous0_scenario12-1
 #ls_files <- c(path_ltoto1, path_ltoto2, path_ltoto3)
 
 
+#exemple_sd 64 plantes (N+ 6 params) / simul v ancienne: pas rec/non-rec
+
+path_zipSD <- system.file("extdata", "10100_SD4-4.zip", package = "RPackVGL")
+toto_sd <- read.table(unz(path_zipSD, "toto_10100_l-egume_Fix0-Fix1_damidouble4_scenario40-1_Lusignan30IrrNN_0_Lusignan30_SD4-4_.csv"), header=T, sep=";")
+outHR_sd <- read.table(unz(path_zipSD, "outHR_10100_l-egume_Fix0-Fix1_damidouble4_scenario40-1_Lusignan30IrrNN_0_Lusignan30_SD4-4_.csv"), header=T, sep=";")
+BilanN_sd <- read.table(unz(path_zipSD, "BilanN_10100_l-egume_Fix0-Fix1_damidouble4_scenario40-1_Lusignan30IrrNN_0_Lusignan30_SD4-4_.csv"), header=T, sep=";")
+paramsd_sd <- read.table(unz(path_zipSD, "paramSD_10100_l-egume_Fix0-Fix1_damidouble4_scenario40-1_Lusignan30IrrNN_0_Lusignan30__SD4-4_.csv"), header=T, sep=";")
+
+
+
 # This should be the last line.
 # Note that names are unquoted.
 # I like using overwrite = T so everytime I run the script the
 # updated objects are saved, but the default is overwrite = F
-usethis::use_data(plt_par, toto_0, outHR_0, tabtoto_compet, obs_exemple, ltoto_exemple, overwrite = T)
+usethis::use_data(plt_par, toto_0, outHR_0, BilanN_0, paramsd_0, tabtoto_compet, obs_exemple, ltoto_exemple, toto_sd, outHR_sd, BilanN_sd, paramsd_sd, overwrite = T)
 
 
