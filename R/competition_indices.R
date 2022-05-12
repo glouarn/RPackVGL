@@ -438,3 +438,59 @@ Calc_CESE_diag <- function(diag)
   x$SE <- SE
   x
 }
+
+
+
+
+
+##############
+## indices pour plot melanges binaires de de Wit
+##############
+
+
+
+
+#' Calculate density for Optimal overyiending in De Wit's simulation design + other indices
+#'
+#' @export
+CalcOpt <- function(modeltot , xx, yy)
+{
+  ## calculla proportion et la valeur max de l'overyielding
+  pred <- predict(modeltot, seq(0,1,0.001))
+  #xx <- tabmoy$Yprop1
+  lintot <- lsfit(c(xx[1], xx[7]), c(yy[1], yy[7]))#c(tabmoy$Ytot[1], tabmoy$Ytot[7]))
+  ylin <- lintot$coefficients[["Intercept"]] + seq(0,1,0.001)*lintot$coefficients[["X"]]
+
+  diff_predlin <- pred$y - ylin
+
+  idopt <- which(abs(diff_predlin ) == max(abs(diff_predlin )))
+  propOpt <- pred$x[idopt]
+  OverMax <- diff_predlin[idopt]
+
+  #calcul du max de rendement absolu e de la prop correspodante
+  Ytotmax <- max(pred$y)
+  idmax <- which(pred$y == Ytotmax)[1] #le premier si plusieurs
+  propMax <- pred$x[idmax]
+
+  c(propOpt, OverMax, idopt, Ytotmax, propMax)
+}
+# calcul des valeurs d'interet complementaires
+
+
+#' Calculate sowing proportion achieving 50/50 in De Wit's simulation design + other indices
+#'
+#' @export
+CalcPropactu50 <- function (modelesp1, modelesp2, idopt)
+{
+  #calcul prop a laquelle biomasse fait 50/50 (2 modeles se croisent) et prop debiomase a l'otimum d'overyielding
+  pred1 <- predict(modelesp1, seq(0,1,0.001))
+  pred2 <- predict(modelesp2, seq(0,1,0.001))
+  delta <- abs(pred1$y-pred2$y)
+  idmin <- which(delta == min(delta))
+  propsowing50 <- pred1$x[idmin]
+  propLegOtp <- pred1$y[idopt]/(pred1$y[idopt]+pred2$y[idopt])
+  c(propLegOtp, propsowing50)
+}
+
+
+

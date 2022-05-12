@@ -410,7 +410,471 @@ dynamic_graphs <- function(simmoy, name, obs=NULL, surfsolref=NULL)
 
 
 
+#####################
+# plot for simulations of de Wit substitution design
+#
+#
+#####################
 
 
+
+#' Plot of Overyielding against species proportion
+#'
+#' @export
+YtotvsProp <- function(tabmoy, Ymax=2200, nom="", optProp="sowing",visuplot=T, visutext=T, supindices=T, labx=NA,col2=2,...)
+{
+  ## calcul des composante de l'overyielding biomasse et fait un plot (visutext=visualisation des valeurs; visuplot=visulaisation des )
+
+
+  #actual or sowing proportions?
+  if (optProp=="sowing")
+  {
+    xx <- tabmoy$Semprop1
+    if (is.na(labx))
+    {labx <- 'Sowing proportion (Sp. 1)'}
+  }
+  if (optProp=="actual")
+  {
+    xx <- tabmoy$Yprop1
+    if (is.na(labx))
+    {labx <- 'Actual proportion (Sp. 1)'}
+  }
+
+  #esp pures
+  moyesp1_pur <- mean(tabmoy[tabmoy$Semprop1==1., c("Ytot")])
+  moyesp2_pur <- mean(tabmoy[tabmoy$Semprop1==0., c("Ytot")])
+
+  #calcul des fits des valeurs moyennes
+  #modeltot <- smooth.spline(xx, tabmoy$Ytot)
+  modeltot <- tryCatch(smooth.spline(xx, tabmoy$Ytot), error=function(e) smooth.spline(xx, tabmoy$Ytot, nknots =5))
+  inttot = sum(predict(modeltot, seq(0,1,0.001))$y*0.001) - (moyesp1_pur + moyesp2_pur)/2
+
+  #modelesp1 <- smooth.spline(xx, tabmoy$YEsp1)
+  modelesp1 <- tryCatch(smooth.spline(xx, tabmoy$YEsp1), error=function(e) smooth.spline(xx, tabmoy$YEsp1, nknots =5))
+  intesp1 = sum(predict(modelesp1, seq(0,1,0.001))$y*0.001) - (moyesp1_pur + 0)/2
+
+  #modelesp2 <- smooth.spline(xx, tabmoy$YEsp2)
+  modelesp2 <- tryCatch(smooth.spline(xx, tabmoy$YEsp2), error=function(e) smooth.spline(xx, tabmoy$YEsp2, nknots =5))
+  intesp2 = sum(predict(modelesp2, seq(0,1,0.001))$y*0.001) - (0 + moyesp2_pur)/2
+
+
+  #plot des valeur moyennes Ytot si option activee
+  if (visuplot==T)
+  {
+    plot(xx, tabmoy$Ytot, ylim=c(0,Ymax), xlab=labx, ylab='Shoot biomass (g.m-2)', main=nom, ...)
+    #segments(tabmoy$Semprop1, tabmoy$Ytot, tabmoy$Semprop1, tabmoy$Ytot+tabmoy$Ytotsd)
+    #segments(tabmoy$Semprop1, tabmoy$Ytot, tabmoy$Semprop1, tabmoy$Ytot-tabmoy$Ytotsd)
+    #segments(xx[1], tabmoy$Ytot[1], xx[7], tabmoy$Ytot[7], lty=2)
+    segments(xx[1], moyesp2_pur, xx[7], moyesp1_pur, lty=2)
+    lines(modeltot)
+
+    points(xx, tabmoy$YEsp1,col=col2)
+    #segments(xx[1], tabmoy$YEsp1[1], xx[7], tabmoy$YEsp1[7], lty=2, col=col2)
+    segments(xx[1], 0, xx[7], moyesp1_pur, lty=2, col=col2)
+    lines(modelesp1, col=col2)
+
+    points(xx, tabmoy$YEsp2,col=4)
+    #segments(xx[1], tabmoy$YEsp2[1], xx[7], tabmoy$YEsp2[7], lty=2, col=4)
+    segments(xx[1], moyesp2_pur, xx[7], 0, lty=2, col=4)
+    lines(modelesp2, col=4)
+
+  }
+
+  if (visutext==T & visuplot==T)
+  {
+    text(0.15, 0.97*Ymax, paste('overY: ' ,round(inttot,2)))
+    text(0.15, 0.93*Ymax, paste('Sp1: ' , round(intesp1,2)),col=2)
+    text(0.15,0.89*Ymax, paste('Sp2: ' ,round(intesp2,2)),col=4)
+  }
+
+
+
+  res <- as.list(c(inttot, intesp1, intesp2))
+  names(res) <- c("inttot", "intesp1", "intesp2")
+
+  #calcul et renvoie valeurs calculees supplementaires
+  if (supindices==T)
+  {
+    #cacul des autres indices
+    ids <- CalcOpt(modeltot , xx, tabmoy$Ytot)
+    propOpt <- ids[1]
+    OverMax <- ids[2]
+    Ytotmax <- ids[4]
+    propYtotmax <- ids[5]
+    ids1 <- CalcPropactu50(modelesp1, modelesp2, ids[3])
+    propsowing50 <- ids1[2]
+    propLegOtp <- ids1[1]
+
+    res <- as.list(c(inttot, intesp1, intesp2, propOpt, OverMax, propsowing50, propLegOtp, Ytotmax, propYtotmax))
+    names(res) <- c("inttot", "intesp1", "intesp2", "propOpt", "OverMax", "propsowing50", "propLegOtp", "Ytotmax", "propYtotmax")
+  }
+
+
+  res
+
+}
+
+
+
+#' Plot of N-Overyielding against species proportion
+#'
+#' @export
+QNtotvsProp <- function(tabmoy, Ymax=100, nom="", optProp="sowing", visuplot=T, visutext=T, supindices=T, labx=NA,...)
+{
+  ## calcul des composante de l'overyielding Ntot et fait un plot (visutext=visualisation des valeurs; visuplot=visulaisation des plots)
+
+
+  #actual or sowing proportions?
+  if (optProp=="sowing")
+  {
+    xx <- tabmoy$Semprop1
+    if (is.na(labx))
+    {labx <- 'Sowing proportion (Sp. 1)'}
+  }
+  if (optProp=="actual")
+  {
+    xx <- tabmoy$Yprop1
+    if (is.na(labx))
+    {labx <- 'Actual proportion (Sp. 1)'}
+  }
+
+  #calcul des fits des valeurs moyennes
+  modeltot <- smooth.spline(xx, tabmoy$QNtot)
+  intoverN = sum(predict(modeltot, seq(0,1,0.001))$y*0.001) - (tabmoy$QNtot[1]+tabmoy$QNtot[7])/2
+  intQNtot = sum(predict(modeltot, seq(0,1,0.001))$y*0.001)
+
+  modelesp1 <- smooth.spline(xx, tabmoy$QNupttot)
+  intNupt = sum(predict(modelesp1, seq(0,1,0.001))$y*0.001)
+  intFix = intQNtot-intNupt
+
+  modeleg <- smooth.spline(xx, tabmoy$QNuptleg)
+  intleg = sum(predict(modeleg, seq(0,1,0.001))$y*0.001) - (tabmoy$QNuptleg[1]+tabmoy$QNuptleg[7])/2
+
+
+  if (visuplot==T)
+  {
+    plot(xx, tabmoy$QNtot, ylim=c(0,Ymax), xlab=labx, ylab='Plant N (g N.m-2)', main=nom, ...)
+    segments(xx[1], tabmoy$QNtot[1], xx[7], tabmoy$QNtot[7], lty=2)
+    lines(modeltot)
+
+    points(xx, tabmoy$QNupttot,col=2)
+    #segments(xx[1], tabmoy$QNupttot[1], xx[7], tabmoy$QNupttot[7], lty=2, col=2)
+    lines(modelesp1, col=2)
+
+    points(xx, tabmoy$QNuptleg,col=4)
+    segments(xx[1], tabmoy$QNuptleg[1], xx[7], tabmoy$QNuptleg[7], lty=2, col=4)
+    lines(modeleg, col=4)
+
+  }
+
+  if (visutext==T)
+  {
+    text(0.15,Ymax, paste(round(intoverN,2), '(over)'))
+    text(0.15,0.97*Ymax, paste(round(intFix,2), '(Fix)'),col=1)
+    text(0.15,0.94*Ymax, paste(round(intNupt,2), '(Nupt)'),col=2)
+    text(0.15,0.91*Ymax, paste(round(intleg,2), '(leg)'),col=4)
+  }
+
+  res <- as.list(c(intoverN, intQNtot, intNupt, intFix, intleg))
+  names(res) <- c("intoverN", "intQNtot", "intNupt", "intFix", "intleg")
+
+
+  if (supindices==T)
+  {
+    #cacul des autres indices
+    ids <- CalcOpt(modeltot , xx, tabmoy$QNtot)
+    propOptN <- ids[1]
+    OverMaxN <- ids[2]
+    QNmax <- ids[4]
+    propQNmax <- ids[5]
+    res <- as.list(c(intoverN, intQNtot, intNupt, intFix, intleg, propOptN, OverMaxN, QNmax, propQNmax))
+    names(res) <- c("intoverN", "intQNtot", "intNupt", "intFix", "intleg", "propOptN", "OverMaxN", "QNmax", "propQNmax")
+
+  }
+
+  res
+
+}
+
+
+
+
+OverYvsAll <- function(ls_tabmoys, key, Ymax=300, nom="", optProp="sowing", visuplot=T,labx=NA,laby=NA,...)
+{
+  #key <- ls_keysc[20]
+  #figure de tous les overyielding
+  ls_keysc = names(ls_tabmoys)
+
+  if (optProp=="sowing" & is.na(labx))
+  { labx <- 'Sowing proportion (Sp. 1)'}
+  if (optProp=="actual" & is.na(labx))
+  { labx <- 'Actual proportion (Sp. 1)'}
+  if (optProp=="sowing" & is.na(laby))
+  { laby <- 'Apparent Overyielding (g.m-2)'}
+  if (optProp=="actual" & is.na(laby))
+  { laby <- 'Overyieding (g.m-2)'}
+
+  if (visuplot==T)
+  {
+    plot(-100, -100, ylim=c(-Ymax,Ymax), xlim=c(0,1), main=nom, xlab=labx, ylab=laby, ...)
+    segments(0, 0, 1, 0, col=1)
+  }
+
+  resx <- NULL
+  resy <- NULL
+
+  for (keysc in ls_keysc)
+  {
+    #keysc <- ls_keysc[3]
+    tabmoy <- ls_tabmoys[[keysc]]
+
+    #xx <- tabmoy$Semprop1#tabmoy$Yprop1#
+    yy <- tabmoy$Ytot
+    #actual or sowing proportions?
+    if (optProp=="sowing")
+    {
+      xx <- tabmoy$Semprop1
+      labx <- 'Sowing proportion (Esp. 1)'
+    }
+    if (optProp=="actual")
+    {
+      xx <- tabmoy$Yprop1
+      labx <- 'Actual proportion (Esp. 1)'
+    }
+
+    lintot <- lsfit(c(xx[1], xx[7]), c(yy[1], yy[7]))
+    ylin <- lintot$coefficients[["Intercept"]] + xx*lintot$coefficients[["X"]]
+    overY <- yy - ylin
+
+    if (keysc != key)
+    {
+      if (visuplot==T)
+      { points(xx, overY, pch=16, col='light grey') }
+      resx <- cbind(resx,xx)
+      resy <- cbind(resy,overY)
+    } else
+    {
+      savexx <- xx
+      saveyy <- overY
+    }
+  }
+  if (visuplot==T)
+  { points(savexx, saveyy, pch=16, col='blue', type='b')}
+  resx <- cbind(resx,savexx)
+  resy <- cbind(resy,saveyy)
+  data.frame(x=as.numeric(resx), y=as.numeric(resy))
+}
+
+
+
+
+
+
+
+#####################
+# plot for visualising intra-specific diversity
+#
+#
+#####################
+
+
+
+#' Plot Area
+#'
+#' @export
+My_AreaPlot <- function(don, lscol="", ...)
+{
+  #area plot
+  #prends un dataframe don avec x en colonne 1 et les n colonnes de y a mettre en ordre decroissnt (+couleur)
+
+  xmin <- min(don[,1])
+  xmax <- max(don[,1])
+  cumtot <- as.numeric(rowSums(as.matrix(don[,2:dim(don)[2]])))
+  ymax <- max(cumtot)
+
+  plot(-100,-100, ylim=c(0,ymax), xlim=c(xmin,xmax), ...)
+
+  for (i in 2:dim(don)[2])
+  {
+    #i <- 2
+    cumi <- as.numeric(rowSums(as.matrix(don[,i:dim(don)[2]])))
+    x <- c(xmin, don[,1], xmax)
+    y <- c(0, cumi,0)
+    col <- if(lscol != "") lscol[i] else i #genere warnings
+    polygon(x,y,col=col)
+  }
+
+}
+
+
+
+
+#' Plot Map of values
+#'
+#' @export
+PlotMapVal <- function(tab, Val_param, cexfactor = 4., append = F, reverse=F, norm=NA, ...)
+{
+
+  # tab df with x, y and val_param values
+
+  #cexfactor = 4.
+  #col_="blue"
+  #append = F#T
+  #tab <- tabindices
+
+  # normalisation of values
+  if (is.na(norm) == T & reverse == F)
+  {
+    val_norm <- max(tab[,c(Val_param)])
+  } else if(is.na(norm) == T & reverse == T)
+  {
+    val_norm <- max(1/tab[,c(Val_param)])
+  } else
+  {
+    val_norm <- norm #lu
+  }
+
+  if (reverse == F)
+  {
+    Val_paramNorm = tab[,c(Val_param)] / val_norm
+  } else
+  {
+    Val_paramNorm = (1/tab[,c(Val_param)])/ max(1/tab[,c(Val_param)])
+  }
+
+  # plot
+  if (append == F)
+  {
+    plot(tab$x, tab$y, cex=cexfactor*Val_paramNorm, xlab="x", ylab="y", ...)
+  } else
+  {
+    points(tab$x, tab$y, cex=cexfactor*Val_paramNorm, ...)
+  }
+
+}
+# plot map of valeur normalisee
+#PlotMapVal(tabindices, Val_param="Len", cexfactor = 4., col="blue")
+#PlotMapVal(tabindices, Val_param="Len", cexfactor = 4., col="blue", pch=16)
+
+# visu des parametres
+#PlotMapVal(tabindices, Val_param="Len", cexfactor = 4., col="blue", main="Parameter values")
+#PlotMapVal(tabindices, Val_param="phyllochron", cexfactor = 4., col="red", append = T, reverse=T )
+#PlotMapVal(tabindices, Val_param="Lfeuille", cexfactor = 4., col="green", append = T)
+#PlotMapVal(tabindices, Val_param="Vmax2", cexfactor = 4., col="yellow", append = T)
+
+
+
+
+PlotDynMStot <- function(MStot, sp_tabSD, sp, lscol="", titre="", ymax=28, append=F)
+{
+  # plot dynamique de MStot au cours du temps par plante avec couleur selon decile
+  if (append==F)
+  {
+    plot(-10, -10, xlim=c(1,dim(MStot)[1]), ylim=c(0,ymax), main=titre, xlab="t", ylab="MStot")
+  }
+  for (i in 1:length(sp_tabSD[[sp]]$nump))
+  {
+    nump <- sp_tabSD[[sp]]$nump[i]
+    col <- if(lscol != "") lscol[sp_tabSD[[sp]]$decile[i]] else i #genere warnings
+    points(1:dim(MStot)[1], MStot[,nump+1], col=col, type='l')
+  }
+}
+
+
+
+plotMean_Div <-function (matind, xval, title="", xlab="",ylab="",ylim=c(0,100), lscol=NULL)
+{
+  # plot de la moyenne versus les valeurs par individu
+  nbplt <- dim(matind)[2]
+  moy_ <-rowMeans(matind, na.rm=T)
+  plot(xval, moy_, col="dark grey", lwd=3, main=title, xlab=xlab, ylab=ylab,ylim=ylim)
+  for (idp in 1:nbplt)
+  {
+    if (is.null(lscol))
+    {col<-idp}
+    else
+    {col <- lscol[idp]}
+
+    points(xval, matind[,idp], col=idp, type="l")
+  }
+
+}
+
+
+
+
+
+plot_ranking_lines <- function(tab, id_refdec=1, decHaut=9, decBas=2, id_refline=NA, titre='', ymax=1, xlab='',ylab='')
+{
+  # plot de trajectoires d'interaction/ranking entre modalite classees en colonnes dans un tableau (tab)
+  # visualise selection de decile ou d'individus particuliers dans une population
+
+  #id_refdec <- 3#1 #colone de ref pour les deciles
+  #id_refline <- NA#10#
+  #decHaut <- 9
+  #decBas <- 2
+  #titre <- paste(trait, sp)
+  #ymax <- 15000
+
+  nb_dates <- dim(tab)[2]
+  plot(-10,-10, xlim=c(0,nb_dates+1), ylim=c(0, ymax),main=titre,xlab=xlab,ylab=ylab)
+  for (i in 1:dim(dd)[1])
+  {
+    points(1:nb_dates, as.numeric(tab[i,]), type="b", col="grey")
+  }
+
+  #ajout decile de la date 'id_refdec'
+  Dec_ <- quantile(tab[,id_refdec], na.rm=T, probs = seq(0, 1, 0.1))
+  D9 <- as.numeric(Dec_[decHaut+1]) #decile 1 haut
+  D2 <- as.numeric(Dec_[decBas+1]) #decile 2 bas
+  for (i in 1:dim(tab)[1])
+  {
+    if (! is.na(tab[i,id_refdec]))
+    {
+
+      if (tab[i,id_refdec] > D9)
+      {
+        points(1:nb_dates, as.numeric(tab[i,]), type="b", col="red")
+      }
+
+      if (tab[i,id_refdec] < D2)
+      {
+        points(1:nb_dates, as.numeric(tab[i,]), type="b", col="blue")
+      }
+    }
+  }
+
+  #ajout de la ligne a surligner
+  if (! is.na(id_refline))
+  {
+    points(1:nb_dates, as.numeric(tab[id_refline,]), type="b", col=1, lwd=2)
+  }
+}
+
+#decile sur base 1ere date
+#plot_ranking_lines(dd, id_refdec=1, titre=paste(trait, sp), ymax=15000)
+#decile sur base derniere date
+#plot_ranking_lines(dd, id_refdec=3, titre=paste(trait, sp), ymax=15000)
+#visu plante 50 et pas les deciles
+#nbp <- 50
+#plot_ranking_lines(dd, id_refdec=1, decHaut=10, decBas=0, id_refline=nbp, titre=paste(trait, sp, nbp), ymax=15000)
+
+
+
+
+
+#fonction des exemple de pairs
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
+{
+  usr <- par("usr"); on.exit(par(usr))
+  par(usr = c(0, 1, 0, 1))
+  r <- abs(cor(x, y))
+  txt <- format(c(r, 0.123456789), digits = digits)[1]
+  txt <- paste0(prefix, txt)
+  if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
+  text(0.5, 0.5, txt, cex = cex.cor * r)
+}
+#df <- data.frame(retard,Val_param,ParaMvois,PARivois,MScumvois, MStot_ini, MStot_fin, MStot_coupe1, MStot_coupe2, MStot_coupe3, MStot_coupe4, MStot_coupe5)
+#pairs(df, lower.panel = panel.smooth, upper.panel = panel.cor,gap=0, row1attop=FALSE, main=key)
 
 

@@ -34,11 +34,11 @@ sp_dtoto <- split(dtoto, dtoto$keysc)
 
 #selection des fichiers de dtoto (2 jeux de simul dans tabtoto_compet)
 
-#key <- "55-1 Fix2-nonFixSimTest Lusignan30IrrN2 -"
-#keypur <- "55-1 nonFixSimTest-nonFixSimTest Lusignan30IrrN2 -" #traitement pur en plus
+key <- "55-1 Fix2-nonFixSimTest Lusignan30IrrN2 -"
+keypur <- "55-1 nonFixSimTest-nonFixSimTest Lusignan30IrrN2 -" #traitement pur en plus
 
-key <-"88-1 Fix2-nonFixSimTest Lusignan30IrrN2 -"
-keypur <- "88-1 nonFixSimTest-nonFixSimTest Lusignan30IrrN2 -"
+#key <-"88-1 Fix2-nonFixSimTest Lusignan30IrrN2 -"
+#keypur <- "88-1 nonFixSimTest-nonFixSimTest Lusignan30IrrN2 -"
 
 dat <- rbind(sp_dtoto[[key]], sp_dtoto[[keypur]])
 dat$damier <- as.character(dat$damier)
@@ -208,5 +208,53 @@ Plot_resCE_SE(resCE_SE, ylim=c(-400,400), type='b', ylab="OYa", xlab="Prop1", ma
 
 
 
+
+
+
+
+```
+
+
+
+## test overyielding sur desisgn de deWit?
+
+```{r }
+
+
+#####################
+#####################
+# test figures deWit et indices article
+
+
+
+# pour figure OY et OY-N 
+# 
+
+#dat <- tabtoto_compet
+#names(dat)
+#unique(dat$keysc)
+
+## selectionne 1 cle et densite 400 (dispositif de substitution)
+#dtoto <- dat[dat$keysc == "55-1 Fix2-nonFixSimTest Lusignan30IrrN2 -" & dat$densite== 400., ]
+
+
+dtoto <- diag
+
+#calcul tamoy (ici pas utile car 1 seul sim par densite)
+tabmoy <- Build_AverageScTable(dtoto, keysc=unique(dtoto$keysc))
+tabmoy
+
+#visu plot et indices
+res <- YtotvsProp(tabmoy, visuplot=T, visutext=F, supindices=F)
+res
+
+res <- YtotvsProp(tabmoy, visuplot=F, visutext=F, supindices=T)
+res
+
+resN <- QNtotvsProp(tabmoy, visuplot=T, visutext=F, supindices=F)
+resN
+
+resN <- QNtotvsProp(tabmoy, visuplot=F, visutext=F, supindices=T)
+resN
 
 ```

@@ -26,6 +26,8 @@ outHR_0 <- read.table(unz(path_zip0, "outHR_0.csv"), header=T, sep=";")
 BilanN_0 <- read.table(unz(path_zip0, "BilanN_0.csv"), header=T, sep=";")
 paramsd_0 <- read.table(unz(path_zip0, "paramsd_0.csv"), header=T, sep=";")
 
+## toto file mayssa
+toto <- read.table(system.file("extdata", "toto.csv", package = "RPackVGL"), header=T, sep=";")
 
 
 ## exemple files
@@ -60,12 +62,21 @@ outHR_sd <- read.table(unz(path_zipSD, "outHR_10100_l-egume_Fix0-Fix1_damidouble
 BilanN_sd <- read.table(unz(path_zipSD, "BilanN_10100_l-egume_Fix0-Fix1_damidouble4_scenario40-1_Lusignan30IrrNN_0_Lusignan30_SD4-4_.csv"), header=T, sep=";")
 paramsd_sd <- read.table(unz(path_zipSD, "paramSD_10100_l-egume_Fix0-Fix1_damidouble4_scenario40-1_Lusignan30IrrNN_0_Lusignan30__SD4-4_.csv"), header=T, sep=";")
 
-
+# ajout x, y a paramsd_sd (present dans derniere version du modele mais pas ces fichiers)
+xx <- NULL
+yy <- NULL
+for(i in 1:8)
+{
+  xx <- c(xx, rep(i,8))
+  yy <- c(yy, 8:1)
+}
+paramsd_sd$x <- xx
+paramsd_sd$y <- yy
 
 # This should be the last line.
 # Note that names are unquoted.
 # I like using overwrite = T so everytime I run the script the
 # updated objects are saved, but the default is overwrite = F
-usethis::use_data(plt_par, toto_0, outHR_0, BilanN_0, paramsd_0, tabtoto_compet, obs_exemple, ltoto_exemple, toto_sd, outHR_sd, BilanN_sd, paramsd_sd, overwrite = T)
+usethis::use_data(plt_par, toto, toto_0, outHR_0, BilanN_0, paramsd_0, tabtoto_compet, obs_exemple, ltoto_exemple, toto_sd, outHR_sd, BilanN_sd, paramsd_sd, overwrite = T)
 
 

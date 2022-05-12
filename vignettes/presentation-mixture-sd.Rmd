@@ -1,0 +1,381 @@
+---
+title: "presentation-mixture-sd"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{presentation-mixture-sd}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(RPackVGL)
+library(pander)
+library(ggplot2)
+library(ggpubr)
+library(gginnards)
+```
+
+
+
+## Read toto and sd files
+
+```{r }
+# avec option 'asis' du chunk #, results='asis'
+
+#import toto file exemple with 4 plants
+df_toto <- toto_sd
+dim(df_toto)
+#head(df_toto)
+
+# liste des variables
+ls_var <- unique(df_toto$V1)
+ls_var
+
+# extrait d'une variable
+var_ <- ls_var[4]
+tab <- df_toto[df_toto$V1 == var_, ]
+head(tab)
+#pander::pandoc.table(tab)
+
+
+df_sd <- paramsd_sd
+dim(df_sd)
+names(df_sd)
+
+
+```
+
+
+
+## test calcul et plot dynamique (ltoto)
+
+```{r }
+# test calculs et graph mixtures
+
+# par espece
+
+#ltoto <- vector("list", length=1)
+#names(ltoto) <- "toto_sd"
+#ltoto[["toto_sd"]] <- df_toto
+#simmoy <- build_simmoy(ltoto, lsusm=names(ltoto))
+
+#MSArec et non rec requis pour clacul de simmoy
+
+# MSArec, MSAnonrec pas dans le fichier exemple!!!
+dat <- toto_sd
+TT <- dat[dat$V1=='TT',3] #peut changer selon les plantes!
+STEPS <- dat[dat$V1=='TT',2]
+nbplt <- length(dat)-2
+surfsolref <- dat[dat$V1=='pattern',3] #m2
+
+#construit liste des toto file complets
+nomtoto <- "toto_10100_l-egume_Fix0-Fix1_damidouble4_scenario40-1_Lusignan30IrrNN_0_Lusignan30_SD4-4_.csv"
+ltoto <- vector("list", length=1)
+names(ltoto) <- nomtoto #"toto_sd"
+ltoto[[nomtoto]] <- toto_sd
+
+
+#calcul dynamique LAI
+LAI <- moysimval(ltoto, lsusm=names(ltoto), var='SurfPlante')/ surfsolref
+esp <- "Fix0"
+LAI_1 <- moysimval(ltoto, lsusm=names(ltoto), var='SurfPlante', esp)/ surfsolref
+esp <- "Fix1"
+LAI_2 <- moysimval(ltoto, lsusm=names(ltoto), var='SurfPlante', esp)/ surfsolref
+
+
+#regular plot
+plot(STEPS, LAI, type="l")
+points(STEPS, LAI_1, col=2)
+points(STEPS, LAI_2, col=3)
+
+
+#calcul de simmoy
+# all
+simmoy <- build_simmoy(ltoto, lsusm=names(ltoto))
+simsd <- build_simmoy(ltoto, lsusm=names(ltoto), optSD = T)
+names(simmoy)
+
+# sp1 & sp2
+sp1="Fix0"
+simmoy_sp1 <- build_simmoy(ltoto, lsusm=names(ltoto), esp=sp1)
+simsd_sp1 <- build_simmoy(ltoto, lsusm=names(ltoto), esp=sp1, optSD = T)
+
+sp2="Fix1"
+simmoy_sp2 <- build_simmoy(ltoto, lsusm=names(ltoto), esp=sp2)
+simsd_sp2 <- build_simmoy(ltoto, lsusm=names(ltoto), esp=sp2, optSD = T)
+
+plt <- gg_plotsim("LAI", simmoy, simsd, name="LAI", col="black")
+plt
+plt1 <- gg_plotsim("LAI", simmoy_sp1, simsd_sp1, name="LAI-1", col="red")
+plt1
+plt2 <- gg_plotsim("LAI", simmoy_sp2, simsd_sp2, name="LAI-2", col="green")
+plt2
+
+# test concat_ggplot_layers
+ls_plt <- list(plt, plt1, plt2)
+names(ls_plt) <- c("LAI-all", "LAI-sp1", "LAI-sp2")
+Concat_ggplot_layers(ls_plt)
+
+
+```
+
+
+## test genetic variability and dynamic trait selection
+
+```{r }
+
+# visu selection
+
+#construit liste des sd file 
+ls_paramSD <- vector("list", length=1)
+names(ls_paramSD) <- nomtoto #"paramsd_sd"
+ls_paramSD[[nomtoto]] <- paramsd_sd
+
+
+#param_name in c("Len","Vmax2"))
+  
+#calcul decile /param
+param_name <- "Len"
+resread <- read_lsSD_MStot(ltoto, ls_paramSD, param_name)
+# read_lsSD_MStotmarche pas ds exemple car nomSD determine automatiquement (liste de nom et pas fichiers)
+# et read.table dans fontion plante
+
+
+#marche pour cas de resread simul unitaire
+sp_tabSD <- split(resread[["ls_tabSD"]][[1]], resread[["ls_tabSD"]][[1]]$name)
+MStot <- resread[["ls_MStot"]][[1]]
+names(sp_tabSD)
+sp_tabSD[["Fix0"]]
+dim(MStot)
+
+plot(sp_tabSD[["Fix0"]]$decile, sp_tabSD[["Fix0"]]$Len)
+plot(sp_tabSD[["Fix0"]]$decile, sp_tabSD[["Fix0"]]$Vmax2)
+
+test <- Build_EvolProportions(MStot, sp_tabSD, sp="Fix0")
+head(test)
+res <- BuildResDecil(MStot, sp_tabSD, param_name)
+res
+
+# 
+
+
+#plot Area
+lscol10 <- colorRampPalette(c("blue", "red"))( 11 ) #palette de couleur des deciles
+
+sp <- names(sp_tabSD)[1]
+res <- Build_EvolProportions(MStot, sp_tabSD, sp)
+don <- res[,2:12] #t et les deciles
+titre <- sp #paste(sp, key)#esps,
+My_AreaPlot(don, main=titre, xlab="t", ylab=paste("decile ", param_name), lscol=rev(lscol10))
+  
+  
+sp <- names(sp_tabSD)[2]
+res <- Build_EvolProportions(MStot, sp_tabSD, sp)
+don <- res[,2:12] #t et les deciles
+titre <- sp #paste(sp, key)#esps,
+My_AreaPlot(don, main=titre, xlab="t", ylab=paste("decile ", param_name), lscol=rev(lscol10))
+  
+
+
+
+
+
+# #calcul des correlations MSindividuelles
+# ls_res_cor_i <- Calc_MSindiv_Corr(ltoto, ls_toto_paquet, ls_paramSD, lspar=ls_parsd)
+
+
+
+
+########### test visu fichiers de sortie spatiaux
+
+couleurs <- colorRampPalette(c('white', 'red')) #default
+couleursR <- colorRampPalette(c('white', 'red'))
+couleursB <- colorRampPalette(c('white', 'blue'))
+couleursV <- colorRampPalette(c('white', 'green'))
+lscol10 <- colorRampPalette(c("blue", "red"))( 11 ) #palette de couleur des deciles
+
+
+tabindices <- resread[["ls_tabSD"]][[1]]
+tabindices
+dim(tabindices)
+names(tabindices)
+
+
+# plot map
+
+# visu 1 couleur ttes especes
+lscols <- couleursR(101)
+tabindices$MSnorm <- tabindices$MStotfin / max(tabindices$MStotfin)
+cols_ <- col100((tabindices$MSnorm-0.00001)*100, lscols)
+cols_[is.na(cols_)] <- lscols[101] #cas superieur a 1
+
+  
+plot(tabindices$x, tabindices$y, cex=4*tabindices$MSnorm,pch=16, col=cols_, main="")
+Val_param <- 1. #valeur bidon
+points(tabindices$x, tabindices$y, cex=4*(1/Val_param)/max(1/Val_param), col="blue")
+
+
+names(tabindices)
+tabindices$name
+
+#plot en separant les esp
+sp_dfcoord <- split(tabindices, tabindices$name)
+
+lscols <- couleursR(101)
+cols_ <- col100((sp_dfcoord[["Fix0"]]$MSnorm-0.00001)*100, lscols)
+cols_[is.na(cols_)] <- lscols[101] #cas superieur a 1
+plot(sp_dfcoord[["Fix0"]]$x, sp_dfcoord[["Fix0"]]$y, cex=4*sp_dfcoord[["Fix0"]]$MSnorm,pch=16,col=cols_, main="")
+
+lscols <- couleursV(101)
+cols_ <- col100((sp_dfcoord[["Fix1"]]$MSnorm-0.00001)*100, lscols)
+cols_[is.na(cols_)] <- lscols[101] #cas superieur a 1
+points(sp_dfcoord[["Fix1"]]$x, sp_dfcoord[["Fix1"]]$y, cex=4*sp_dfcoord[["Fix1"]]$MSnorm,pch=16,col=cols_)
+
+
+# a revoir pour en faire une fonction!!!
+# recuperer les coord x, y dans fichier sortie -> oui!
+
+
+# ajouter calcul de valeurs de parametres normalise + visu!
+
+
+```
+
+
+
+## test function PlotMapVal
+
+```{r }
+
+
+couleurs <- colorRampPalette(c('white', 'red')) #default
+couleursR <- colorRampPalette(c('white', 'red'))
+couleursB <- colorRampPalette(c('white', 'blue'))
+couleursV <- colorRampPalette(c('white', 'green'))
+lscol10 <- colorRampPalette(c("blue", "red"))( 11 ) #palette de couleur des deciles
+
+
+tabindices <- resread[["ls_tabSD"]][[1]]
+
+# plot with open symbols (pch = 16)
+PlotMapVal(tabindices, Val_param="Len", cexfactor = 4., col="blue")
+# plot with closed symbols (pch = 16)
+PlotMapVal(tabindices, Val_param="Len", cexfactor = 4., col="blue", pch=16)
+
+
+# visu des parametres
+PlotMapVal(tabindices, Val_param="Len", cexfactor = 4., col="blue", main="Parameter values")
+#PlotMapVal(tabindices, Val_param="phyllochron", cexfactor = 4., col="red", append = T, reverse=T )
+PlotMapVal(tabindices, Val_param="Lfeuille", cexfactor = 4., col="green", append = T)
+PlotMapVal(tabindices, Val_param="Vmax2", cexfactor = 4., col="yellow", append = T)
+
+#ajout value paramAllNorm?
+# migrer dans fichier outputs?
+
+
+# visu 1 couleur ttes especes
+lscols <- couleursR(101)
+MSnorm <- tabindices$MStotfin / max(tabindices$MStotfin)
+cols_ <- col100((MSnorm-0.00001)*100, lscols)
+cols_[is.na(cols_)] <- lscols[101] #cas superieur a 1
+
+PlotMapVal(tabindices, Val_param="MStotfin", col=cols_, main="MStotfin", pch=16)
+
+
+# visu 2 couleurs 2 espes
+
+#plot en separant les esp
+sp_dfcoord <- split(tabindices, tabindices$name)
+norm_val <- max(tabindices$MStotfin)
+norm_val 
+
+#Sp 1
+lscols <- couleursR(101)
+MSnorm <- sp_dfcoord[["Fix0"]]$MStotfin / norm_val
+cols_ <- col100((MSnorm-0.00001)*100, lscols)
+cols_[is.na(cols_)] <- lscols[101] #cas superieur a 1
+
+PlotMapVal(sp_dfcoord[["Fix0"]], Val_param="MStotfin", col=cols_, main="MStotfin 1-2", pch=16, norm=norm_val)
+
+#Sp 2
+lscols <- couleursV(101)
+MSnorm <- sp_dfcoord[["Fix1"]]$MStotfin / norm_val
+cols_ <- col100((MSnorm-0.00001)*100, lscols)
+cols_[is.na(cols_)] <- lscols[101] #cas superieur a 1
+
+PlotMapVal(sp_dfcoord[["Fix1"]], Val_param="MStotfin", col=cols_, pch=16, append = T, norm=norm_val)
+
+
+# ?? pas vu les points -> check!!
+#col qui va pas $MSnorm
+
+```
+
+
+
+
+
+## test info voisins
+
+```{r }
+
+# test calcul id voisins
+ls_idv <- def_indice_vois5050(cote=8, nblignes=8)
+ls_idvois <- ls_idv[[1]]
+ls_idKin <- ls_idv[[2]]
+ls_idnonKin <- ls_idv[[3]]
+
+ls_idvois
+
+
+
+# fonction calc_norm_par pour normaliser valeurs de parametres
+ls_par <- c("Len", "Lfeuille", "Vmax2")
+ls_resNorm <- calc_norm_par(tabindices ,lspar=ls_par, plot_=F)
+#ParamNorm <- calc_norm_par(temptab[,lspar] ,lspar, plot_=F)$mean_norm_par
+
+ls_resNorm
+
+calc_norm_par(tabindices ,lspar=ls_par, plot_=T)
+
+#fonction qui rend un peu obsolete une partie de la fonction PlotMapVal?? surtout pour parametres?
+
+
+# calcul performance des voisins avec calc_neighb_param
+
+ls_resvois <- calc_neighb_param(tabindices ,lspar=ls_par, ls_idvois, ls_idKin, ls_idnonKin, cote=8, nblignes=8)
+ls_resvois
+
+
+```
+
+
+
+
+## test calcul bilan annuel ou par coupe (dtoto)
+
+```{r }
+
+# test
+
+```
+
+
+
+## test overyielding sur simulation desisgn de deWit?
+
+```{r }
+
+# pour figure OY et OY-N sur bilan annuel
+# faut jeu de donnee dedie avec plan de simulation DeWit -> dans dtoto de tabtoto_compet
+# to do... non: dans vignette separee des indices 
+
+
+```

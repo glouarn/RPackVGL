@@ -1,0 +1,118 @@
+---
+title: "presentation-output-files"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{presentation-output-files}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(RPackVGL)
+library(pander)
+```
+
+## Toto file
+
+```{r }
+# avec option 'asis' du chunk #, results='asis'
+
+#import toto file exemple with 4 plants
+df_toto <- toto_0
+dim(df_toto)
+
+tab <-head(df_toto)
+tab
+pander::pandoc.table(tab)
+
+# liste des variables
+ls_var <- unique(df_toto$V1)
+ls_var
+
+# extrait d'une variable
+var_ <- ls_var[5]
+tab <- df_toto[df_toto$V1 == var_, ]
+tab
+#pander::pandoc.table(tab)
+
+```
+
+
+
+
+## outHR file
+
+```{r }
+
+df_outHR <- outHR_0
+dim(df_outHR)
+head(df_outHR)
+
+#visu
+Plot2D_soilVar(df_outHR, var_='FTSW')
+Plot2D_soilVar(df_outHR, var_='HRp')
+Plot2D_soilVar(df_outHR, var_='m_NN4', Boundarycols =c("brown", "green"))
+Plot2D_soilVar(df_outHR, var_='m_NO3', Boundarycols =c("brown", "green"))
+
+
+```
+
+
+
+## sd file
+
+```{r }
+
+# 4 plantes Fet
+df_paramsd0 <- paramsd_0
+dim(df_paramsd0)
+head(df_paramsd0)
+names(df_paramsd0)
+
+PlotMapVal(df_paramsd0, Val_param="Lfeuille", col="blue", main="Random parameter values")
+PlotMapVal(df_paramsd0, Val_param="Largfeuille", col="red", append = T )
+
+
+#64 plantes Fix0 / Fix1
+df_paramsd <- paramsd_sd
+dim(df_paramsd)
+head(df_paramsd)
+names(df_paramsd)
+
+# visu des parametres
+PlotMapVal(df_paramsd, Val_param="Len", col="blue", main="Random parameter values")
+PlotMapVal(df_paramsd, Val_param="phyllochron", col="red", append = T, reverse=T )
+PlotMapVal(df_paramsd, Val_param="Lfeuille", col="green", append = T)
+PlotMapVal(df_paramsd, Val_param="Vmax2", col="yellow", append = T)
+
+#ajout value paramAllNorm? calcul?
+
+```
+
+
+## BilanN file
+
+```{r }
+
+# 
+df_bilan0 <- BilanN_0
+dim(df_bilan0)
+head(df_bilan0)
+names(df_bilan0)
+
+
+plot(df_bilan0$dMSaer, main="dMSaer", type='l')
+
+# ?? pas de DOY/steps dans bilanN?? + revoir certaines sortie
+
+
+```
+
+

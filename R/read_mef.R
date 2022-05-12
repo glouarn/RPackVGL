@@ -37,8 +37,10 @@ read_ltoto <- function(ls_toto)
 
 
 
-
-read_lsSD_MStot <- function(ltoto, ls_paramSD, param_name = "Len")
+#' This function reads the content of the simulation file "toto" and "paramSD" of a list of USM and stocks "ls_tabSD" and "ls_MStot"
+#'
+#' @export
+read_lsSD_MStot <- function(ltoto, lparamSD, param_name = "Len")
 {
 
   #recuperation par paquet des fichiers de base (pas de stockage de l'ensemble des fichiers en memoire)
@@ -65,10 +67,11 @@ read_lsSD_MStot <- function(ltoto, ls_paramSD, param_name = "Len")
     damier <- strsplit(nomfichier, '_')[[1]][5]
     titre <- paste(num_usm, scenar, secenarSD,  damier, graine)#esps,
 
-    #lecture fichier paramSD de l'USM dans tabSD
-    nomSD <- ls_paramSD[grepl(paste("paramSD_",num_usm,"_",sep=""), ls_paramSD)]
-    #param_name <- "Len"
-    tabSD <- read.table(nomSD, header=T, sep=';')
+    # #lecture fichier paramSD de l'USM dans tabSD
+    # nomSD <- ls_paramSD[grepl(paste("paramSD_",num_usm,"_",sep=""), ls_paramSD)]
+    # #param_name <- "Len"
+    # tabSD <- read.table(nomSD, header=T, sep=';')
+    tabSD <- lparamSD[[nomfichier]]
 
     nb <- dim(dat)[2]-2
     MStot <- dat[dat$V1=='MStot',3:(3+nb-1)] #ajout de MStot
@@ -96,7 +99,333 @@ read_lsSD_MStot <- function(ltoto, ls_paramSD, param_name = "Len")
   names(res) <- c("ls_tabSD","ls_MStot")
   res
 }
+# change ls_paramSD (nom de fichier) par lparamSD (liste des fichiers avec nom de la liste = non des toto)
+# !! attend nom de toto avec un certain format: pour avoir bon id et graine
 
+
+
+
+# read_lsSD_MStot_old <- function(ltoto, ls_paramSD, param_name = "Len")
+# {
+#
+#   #recuperation par paquet des fichiers de base (pas de stockage de l'ensemble des fichiers en memoire)
+#   #ltoto <- read_ltoto(ls_toto_paquet)
+#
+#   #lit la liste des fichier Sd et les MStot pour une liste de ltoto
+#
+#   ls_MStot <- vector("list",length(ltoto))
+#   names(ls_MStot) <- names(ltoto)
+#
+#
+#   ls_tabSD <- vector("list",length(ltoto))
+#   names(ls_tabSD) <- names(ltoto)
+#
+#   for (nomfichier in names(ltoto))
+#   {
+#     dat <- ltoto[[nomfichier]]
+#
+#     num_usm <- strsplit(nomfichier, '_')[[1]][2]
+#     scenar <- strsplit(nomfichier, '_')[[1]][6]
+#     graine <- strsplit(nomfichier, '_')[[1]][8]
+#     secenarSD <- strsplit(nomfichier, '_')[[1]][10]
+#     esps <- strsplit(nomfichier, '_')[[1]][4]
+#     damier <- strsplit(nomfichier, '_')[[1]][5]
+#     titre <- paste(num_usm, scenar, secenarSD,  damier, graine)#esps,
+#
+#     #lecture fichier paramSD de l'USM dans tabSD
+#     nomSD <- ls_paramSD[grepl(paste("paramSD_",num_usm,"_",sep=""), ls_paramSD)]
+#     #param_name <- "Len"
+#     tabSD <- read.table(nomSD, header=T, sep=';')
+#
+#     nb <- dim(dat)[2]-2
+#     MStot <- dat[dat$V1=='MStot',3:(3+nb-1)] #ajout de MStot
+#     tabSD$MStotfin <- as.numeric(MStot[dim(MStot)[1],])#derniere ligne
+#     tabSD$id <- titre
+#     tabSD$graine <- graine
+#
+#     #split de tabSD par espece et ajout des decile
+#     sp_tabSD <- split(tabSD, tabSD$name)
+#
+#     sp <- unique(as.character(tabSD$name))[1]#"Fix2"#"nonFixSimTest"#
+#     valparams <- sp_tabSD[[sp]][,c(param_name)]
+#     sp_tabSD[[sp]]$decile <- Which_decile(valparams)
+#     sp <- unique(as.character(tabSD$name))[2]#"nonFixSimTest"#
+#     valparams <- sp_tabSD[[sp]][,c(param_name)]
+#     sp_tabSD[[sp]]$decile <- Which_decile(valparams)
+#
+#     tabSD <- do.call("rbind", sp_tabSD)
+#
+#     #stocke dans ls_tabSD et ls_MStot
+#     ls_tabSD[[nomfichier]] <- tabSD
+#     ls_MStot[[nomfichier]] <- MStot
+#   }
+#   res <- list(ls_tabSD, ls_MStot)
+#   names(res) <- c("ls_tabSD","ls_MStot")
+#   res
+# }
+# # marche pas ds exemple car nomSD determine automatiquement
+# # et read.table dans fontion plante
+# # a revoir / reprendre / adapter
+
+
+
+
+#################################
+## fonction de mise en forme des simuls dynamique
+
+
+
+#' Calculate the the average or standard deviation of a series of simulations
+#'
+#' @param ltoto A list of data frames. Each element of this list correspond to the dynamic simulation output of a single USM
+#' @param lsusm The list of USMs to consider in ltoto
+#' @param var Name of the variable to consider for calculation
+#' @param esp An optional parameter to specify the name of a species to consider in case of multi-species simulations
+#' @param optSD An optional parameter to specify if standard deviation should be calculated instead of mean
+#'
+#' @return A vector of average or stand deviation of the variable 'var'
+#' @export
+#' @examples
+#' ltoto <- ltoto_exemple
+#' NBI <- moysimval(ltoto, lsusm=names(ltoto), var='NBI')
+#' sdNBI <- moysimval(ltoto, lsusm=names(ltoto), var='NBI', optSD=T)
+#' plot(NBI, type='l')
+#' # add standard deviations
+#' segments(1:length(NBI), NBI, 1:length(NBI), NBI+sdNBI, col=2)
+#' segments(1:length(NBI), NBI, 1:length(NBI), NBI-sdNBI, col=2)
+moysimval <- function(ltoto, lsusm, var,esp=NA, optSD=F)
+{
+  # Fait moyenne de la somme pour toute les plantes d'une variable var pour une liste d'usm simulee
+  #utilise pour construire le tableau simmoy
+  #version GL adapt lucas (v4)
+  #optSD=T renvoie standard deviation de la somme des individus
+  #esp = NA pour tous le couvert
+  #esp pour definir pour une espece du couvert
+
+  res <- vector("list",length(lsusm))
+  names(res) <- lsusm
+  for (usm in lsusm)
+  {
+
+    if (is.na(esp))
+    {dat <- ltoto[[usm]]
+    } else
+    {
+      #garde uniquement col esp
+      nomcol <- names(ltoto[[usm]])
+      idcols <- grepl(esp, nomcol)
+      dat <- cbind(ltoto[[usm]][,c(1:2)], ltoto[[usm]][,idcols])
+    }
+
+    nbplt <- length(dat)-2
+    xplt <- as.matrix(dat[dat$V1==var,3:(3+nbplt-1)], ncol=nbplt)
+    xsum <- rowSums(xplt)
+    res[[usm]] <- xsum
+  }
+  if (optSD==F)
+  {
+    #fait moyenne des sim
+    xav <- rowSums(as.data.frame(res))/length(lsusm)
+  }else
+  {
+    #calcule standard deviation des sim
+    xav <- apply(as.data.frame(res),MARGIN=1,sd)
+  }
+
+  xav
+}
+#LAI <- moysimval(ltoto, lsusm=names(ltoto), var='SurfPlante')/ surfsolref
+#LAIsd <- moysimval(ltoto, lsusm=names(ltoto), var='SurfPlante',optSD=T)/ surfsolref
+
+
+
+
+
+#' Calculate the the average or standard deviation of a series of simulations for a set of predefined variables
+#'
+#' @param ltoto A list of data frames. Each element of this list correspond to the simulation output of a single USM
+#' @param lsusm The list of USMs to consider in ltoto
+#' @param esp An optional parameter to specify the name of a species to consider in case of multi-species simulations
+#' @param optSD An optional parameter to specify if standard deviation should be calculated instead of mean
+#'
+#' @return A simmoy data.frame with variables : STEPS, TT, NBI, NBphyto, LAI, MSA, MSArec, MSAnonrec, MSpiv, MSracfine, MSrac, RDepth, Hmax, FTSW, NNI, R_DemandC_Root, cutNB, Npc_aer, Ndfa, Epsi, NBsh
+#' @export
+#' @examples
+#' ltoto <- ltoto_exemple
+#' simmoy <- build_simmoy(ltoto, lsusm=names(ltoto))
+#' plot(simmoy$STEPS, simmoy$NBI, type='l')
+build_simmoy <- function(ltoto, lsusm, esp=NA, optSD=F)
+{
+  #moy des simul des differentes graines d'un meme usm avec moysimval (pour variables dynamiques)
+
+  #recup info generale sur la premier usm
+  #dat <- ltoto[[lsusm[1]]]
+  if (is.na(esp))
+  {dat <- ltoto[[lsusm[1]]]
+  } else
+  {
+    #garde uniquement col esp
+    nomcol <- names(ltoto[[lsusm[1]]])
+    idcols <- grepl(esp, nomcol)
+    dat <- cbind(ltoto[[lsusm[1]]][,c(1:2)], ltoto[[lsusm[1]]][,idcols])
+  }
+
+  TT <- dat[dat$V1=='TT',3] #peut changer selon les plantes!
+  STEPS <- dat[dat$V1=='TT',2]
+  nbplt <- length(dat)-2
+  surfsolref <- dat[dat$V1=='pattern',3] #m2
+  ls_varOUT <- unique(dat$V1)
+
+  # TT et STEPS variables obligatoires
+  simmoy <- data.frame(STEPS, TT)
+
+  if ('SurfPlante' %in% ls_varOUT)
+  { simmoy$LAI <- moysimval(ltoto, lsusm, var='SurfPlante', esp, optSD)/ surfsolref }
+
+  if ('MSaerien' %in% ls_varOUT)
+  { simmoy$MSA <- moysimval(ltoto,lsusm, var='MSaerien', esp, optSD)/ surfsolref }
+
+  if ('MSaerienRec' %in% ls_varOUT)
+  { simmoy$MSArec <- moysimval(ltoto,lsusm, var='MSaerienRec', esp, optSD)/ surfsolref }
+
+  if ('MSaerienNonRec' %in% ls_varOUT)
+  { simmoy$MSAnonrec <- moysimval(ltoto,lsusm, var='MSaerienNonRec', esp, optSD)/ surfsolref}
+
+  if ('MS_pivot' %in% ls_varOUT)
+  { simmoy$MSpiv <- moysimval(ltoto,lsusm, var='MS_pivot', esp, optSD)/ surfsolref }
+
+  if ('MS_rac_fine' %in% ls_varOUT)
+  { simmoy$MSracfine <- moysimval(ltoto,lsusm, var='MS_rac_fine', esp, optSD)/ surfsolref}
+
+  if ('MS_pivot' %in% ls_varOUT & 'MS_rac_fine' %in% ls_varOUT)
+  {  simmoy$MSrac <- simmoy$MSpiv + simmoy$MSracfine }
+
+  if ('NBI' %in% ls_varOUT)
+  {
+    NBI <- moysimval(ltoto,lsusm, var='NBI', esp, optSD)/ nbplt
+    simmoy$NBI <- pmax(0, NBI - 0.75) #correction des simuls pour les comptages decimaux
+  }
+  #NBIquart <- quantsimval(ltoto,lsusm, var_='NBI',esp=esp)
+
+  if ('NBphyto' %in% ls_varOUT)
+  { simmoy$NBphyto <- moysimval(ltoto, lsusm, var='NBphyto', esp, optSD)/ surfsolref}
+
+  if ('NBapexAct' %in% ls_varOUT)
+  { simmoy$Nbapex <- moysimval(ltoto, lsusm, var='NBapexAct', esp, optSD)/ surfsolref }
+
+  if ('NBphyto' %in% ls_varOUT & 'NBapexAct' %in% ls_varOUT)
+  { simmoy$NBphyto <- pmax(0,simmoy$NBphyto - 0.5*simmoy$Nbapex) }
+  #correction simuls pour les comptages decimaux
+
+  if ('NBsh' %in% ls_varOUT)
+  { simmoy$NBsh <- moysimval(ltoto, lsusm, var='NBsh', esp, optSD)/ surfsolref}
+
+  if ('RDepth' %in% ls_varOUT)
+  { simmoy$RDepth <- moysimval(ltoto,lsusm, var='RDepth', esp, optSD)/ nbplt}
+
+  if ('Hplante' %in% ls_varOUT)
+  { simmoy$Hmax <- moysimval(ltoto,lsusm, var='Hplante', esp, optSD)/ nbplt}
+
+  if ('FTSW' %in% ls_varOUT)
+  { simmoy$FTSW <- moysimval(ltoto,lsusm, var='FTSW', esp, optSD)/ nbplt}
+
+  if ('NNI' %in% ls_varOUT)
+  { simmoy$NNI <- moysimval(ltoto,lsusm, var='NNI', esp, optSD)/ nbplt}
+
+  if ('R_DemandC_Root' %in% ls_varOUT)
+  { simmoy$R_DemandC_Root <- moysimval(ltoto,lsusm, var='R_DemandC_Root', esp, optSD)/ nbplt}
+
+  if ('cutNB' %in% ls_varOUT)
+  { simmoy$cutNB <- moysimval(ltoto,lsusm, var='cutNB', esp, optSD)/ nbplt}
+
+  if ('Npc_aer' %in% ls_varOUT)
+  {
+    simmoy$Npc_aer <- moysimval(ltoto,lsusm, var='Npc_aer', esp, optSD)/ nbplt
+    #!! reprendre et ponderer par biomasse aerienne!! cumul Naerien / cumul biomasse
+  }
+
+  if ('Ndfa' %in% ls_varOUT)
+  {
+    simmoy$Ndfa <- moysimval(ltoto,lsusm, var='Ndfa', esp, optSD)/ nbplt
+    #!! reprendre et ponderer par biomasse aerienne!! cumul Qfix / cumul biomasse
+  }
+
+  if ('epsi' %in% ls_varOUT)
+  { simmoy$Epsi <- moysimval(ltoto,lsusm, var='epsi', esp, optSD)}
+
+
+  simmoy
+
+}
+#version revue par Lucas tient cmpte du nom de l'espece dans les assos
+#simmoy <- build_simmoy(ltoto, lsusm=names(ltoto))
+#simmoy <- build_simmoy(ltoto, lsusm=names(ltoto), esp="timbale")
+
+
+
+
+
+# build_simmoy_old <- function(ltoto, lsusm, esp=NA, optSD=F)
+# {
+#   #moy des simul des differentes graines d'un meme usm avec moysimval (pour variables dynamiques)
+#
+#   #recup info generale sur la premier usm
+#   #dat <- ltoto[[lsusm[1]]]
+#   if (is.na(esp))
+#   {dat <- ltoto[[lsusm[1]]]
+#   } else
+#   {
+#     #garde uniquement col esp
+#     nomcol <- names(ltoto[[lsusm[1]]])
+#     idcols <- grepl(esp, nomcol)
+#     dat <- cbind(ltoto[[lsusm[1]]][,c(1:2)], ltoto[[lsusm[1]]][,idcols])
+#   }
+#
+#   TT <- dat[dat$V1=='TT',3] #peut changer selon les plantes!
+#   STEPS <- dat[dat$V1=='TT',2]
+#   nbplt <- length(dat)-2
+#   surfsolref <- dat[dat$V1=='pattern',3] #m2
+#
+#   LAI <- moysimval(ltoto, lsusm, var='SurfPlante', esp, optSD)/ surfsolref
+#   MSA <- moysimval(ltoto,lsusm, var='MSaerien', esp, optSD)/ surfsolref
+#   MSArec <- moysimval(ltoto,lsusm, var='MSaerienRec', esp, optSD)/ surfsolref
+#   MSAnonrec <- moysimval(ltoto,lsusm, var='MSaerienNonRec', esp, optSD)/ surfsolref
+#   MSpiv <- moysimval(ltoto,lsusm, var='MS_pivot', esp, optSD)/ surfsolref
+#   MSracfine <- moysimval(ltoto,lsusm, var='MS_rac_fine', esp, optSD)/ surfsolref
+#   MSrac <- MSpiv + MSracfine
+#   NBI <- moysimval(ltoto,lsusm, var='NBI', esp, optSD)/ nbplt
+#   NBI <- pmax(0, NBI - 0.75) #correction des simuls pour les comptages decimaux
+#   #NBIquart <- quantsimval(ltoto,lsusm, var_='NBI',esp=esp)
+#   NBphyto <- moysimval(ltoto, lsusm, var='NBphyto', esp, optSD)/ surfsolref
+#   Nbapex <- moysimval(ltoto, lsusm, var='NBapexAct', esp, optSD)/ surfsolref
+#   NBphyto <- pmax(0,NBphyto - 0.5*Nbapex) #correction simuls pour les comptages decimaux
+#   NBsh <- moysimval(ltoto, lsusm, var='NBsh', esp, optSD)/ surfsolref
+#
+#   RDepth <- moysimval(ltoto,lsusm, var='RDepth', esp, optSD)/ nbplt
+#   Hmax <- moysimval(ltoto,lsusm, var='Hplante', esp, optSD)/ nbplt
+#   FTSW <- moysimval(ltoto,lsusm, var='FTSW', esp, optSD)/ nbplt
+#   NNI <- moysimval(ltoto,lsusm, var='NNI', esp, optSD)/ nbplt
+#   R_DemandC_Root <- moysimval(ltoto,lsusm, var='R_DemandC_Root', esp, optSD)/ nbplt
+#   cutNB <- moysimval(ltoto,lsusm, var='cutNB', esp, optSD)/ nbplt
+#   Npc_aer <- moysimval(ltoto,lsusm, var='Npc_aer', esp, optSD)/ nbplt
+#   Ndfa <- moysimval(ltoto,lsusm, var='Ndfa', esp, optSD)/ nbplt
+#   Epsi <- moysimval(ltoto,lsusm, var='epsi', esp, optSD)
+#
+#   simmoy <- data.frame(STEPS, TT, NBI, NBphyto, LAI, MSA, MSArec, MSAnonrec, MSpiv, MSracfine, MSrac, RDepth, Hmax, FTSW, NNI, R_DemandC_Root, cutNB, Npc_aer,Ndfa,Epsi,NBsh)
+#   simmoy
+# }#version revue par Lucas tient cmpte du nom de l'espece dans les assos
+#
+# #simmoy <- build_simmoy(ltoto, lsusm=names(ltoto))
+# #simmoy <- build_simmoy(ltoto, lsusm=names(ltoto), esp="timbale")
+# #a revoir avec liste de variables a checker + test pour rendre plus plastique
+#
+
+
+
+
+
+#################################
+## fonction de mise en forme des tableau dtoto de synthese
 
 
 
@@ -337,244 +666,511 @@ build_dtoto <- function(sp_dtoto, key, DOYdeb, DOYScoupe)
 
 
 
+
+#' Build of an average tabmoy from dtoto with several usms and seeds
+#'
+#' @export
+Build_AverageScTable <- function(dtoto, keysc)
+{
+  sc <- strsplit(keysc," ")[[1]][1]
+  mix <- strsplit(keysc," ")[[1]][2]
+  mng <- strsplit(keysc," ")[[1]][3]
+  sd_ <- strsplit(keysc," ")[[1]][4]
+  #recup d'un scenario
+  #sc <- '1-1'
+  #mix <- 'Fix2-nonFixSimTest'
+  #mng <- 'Lusignan30IrrN2'
+
+  res <- dtoto[dtoto$scenario==sc & dtoto$mix==mix & dtoto$Mng==mng & dtoto$sd==sd_, ]
+
+  #calcul des valeurs moyennes
+  x <- by(res$YEsp1, as.factor(res$densite1), mean)
+  tabmoy <- data.frame(densite1=as.numeric(names(x)), YEsp1=as.numeric(x))
+  x <- by(res$YEsp2, as.factor(res$densite1), mean)
+  tabmoy$YEsp2 <- as.numeric(x)
+  x <- by(res$Ytot, as.factor(res$densite1), mean)
+  tabmoy$Ytot <- as.numeric(x)
+  x <- by(res$YEsp1, as.factor(res$densite1), sd)
+  tabmoy$YEsp1sd <- as.numeric(x)
+  x <- by(res$YEsp2, as.factor(res$densite1), sd)
+  tabmoy$YEsp2sd <- as.numeric(x)
+  x <- by(res$Ytot, as.factor(res$densite1), sd)
+  tabmoy$Ytotsd <- as.numeric(x)
+  x <- by(res$Semprop1, as.factor(res$densite1), mean)
+  tabmoy$Semprop1 <- as.numeric(x)
+
+  x <- by(res$QNtot, as.factor(res$densite1), mean)
+  tabmoy$QNtot <- as.numeric(x)
+  x <- by(res$QNupttot, as.factor(res$densite1), mean)
+  tabmoy$QNupttot  <- as.numeric(x)
+  x <- by(res$QNuptleg, as.factor(res$densite1), mean)
+  tabmoy$QNuptleg  <- as.numeric(x)
+  x <- by(res$QNfix, as.factor(res$densite1), mean)
+  tabmoy$QNfix  <- as.numeric(x)
+
+  x <- by(res$Yprop1, as.factor(res$densite1), mean)
+  tabmoy$Yprop1  <- as.numeric(x)
+
+  tabmoy$mix <- mix
+  tabmoy$sc <- sc
+  tabmoy$Mng <- mng
+  tabmoy$keysc <- paste(mix, sc, mng)
+
+  tabmoy
+}
+# to calculate an average tabmoy from dtoto with several usms and seeds
+
+
+
+
+
+
+
+
+
 #################################
-## fonction de mise en formse des simule
+## fonction analyse/mef diversite intra
 
 
 
-#' Calculate the the average or standard deviation of a series of simulations
+#' This function determines to which decile  is a value in a vector of values
 #'
-#' @param ltoto A list of data frames. Each element of this list correspond to the simulation output of a single USM
-#' @param lsusm The list of USMs to consider in ltoto
-#' @param var Name of the variable to consider for calculation
-#' @param esp An optional parameter to specify the name of a species to consider in case of multi-species simulations
-#' @param optSD An optional parameter to specify if standard deviation should be calculated instead of mean
-#'
-#' @return A vector of average or stand deviation of the variable 'var'
 #' @export
-#' @examples
-#' ltoto <- ltoto_exemple
-#' NBI <- moysimval(ltoto, lsusm=names(ltoto), var='NBI')
-#' sdNBI <- moysimval(ltoto, lsusm=names(ltoto), var='NBI', optSD=T)
-#' plot(NBI, type='l')
-#' # add standard deviations
-#' segments(1:length(NBI), NBI, 1:length(NBI), NBI+sdNBI, col=2)
-#' segments(1:length(NBI), NBI, 1:length(NBI), NBI-sdNBI, col=2)
-moysimval <- function(ltoto, lsusm, var,esp=NA, optSD=F)
+Which_decile <- function(valparams)
 {
-  # Fait moyenne de la somme pour toute les plantes d'une variable var pour une liste d'usm simulee
-  #utilise pour construire le tableau simmoy
-  #version GL adapt lucas (v4)
-  #optSD=T renvoie standard deviation de la somme des individus
-  #esp = NA pour tous le couvert
-  #esp pour definir pour une espece du couvert
+  #to find in which decile is a value in a distribution
+  qt <- quantile(valparams, probs=seq(0, 1, 0.1))
+  qt1 <- as.numeric(valparams<=qt[[2]])*1
+  qt2 <- as.numeric(valparams>qt[[2]] & valparams<=qt[[3]])*2
+  qt3 <- as.numeric(valparams>qt[[3]] & valparams<=qt[[4]])*3
+  qt4 <- as.numeric(valparams>qt[[4]] & valparams<=qt[[5]])*4
+  qt5 <- as.numeric(valparams>qt[[5]] & valparams<=qt[[6]])*5
+  qt6 <- as.numeric(valparams>qt[[6]] & valparams<=qt[[7]])*6
+  qt7 <- as.numeric(valparams>qt[[7]] & valparams<=qt[[8]])*7
+  qt8 <- as.numeric(valparams>qt[[8]] & valparams<=qt[[9]])*8
+  qt9 <- as.numeric(valparams>qt[[9]] & valparams<=qt[[10]])*9
+  qt10 <- as.numeric(valparams>qt[[10]])*10
+  qtn <- qt1+qt2+qt3+qt4+qt5+qt6+qt7+qt8+qt9+qt10
+  qtn
+}
 
-  res <- vector("list",length(lsusm))
-  names(res) <- lsusm
-  for (usm in lsusm)
+
+#' This function ...
+#'
+#' @export
+Build_EvolProportions <- function(MStot, sp_tabSD, sp, var="decile")
+{
+  #consrtuction d'un tableau res des proportion de MStot par decile d'une espece
+
+  # 1 MStot esp au cour du temps
+  dynMtotsp <- as.numeric(rowSums(as.matrix(MStot[,sp_tabSD[[sp]]$nump+1])))
+  res <- data.frame(dynMtotsp, t=1:dim(MStot)[1])
+  # 2 ajout des proportion pour chaque decile
+  for (dec in 10:1)
+  {
+    #dec <-9 #numero de decile
+    lsp <- sp_tabSD[[sp]][sp_tabSD[[sp]][,c(var)]==dec, c("nump")]
+    #lsp+1
+
+    frac <- as.numeric(rowSums(as.matrix(MStot[,lsp+1])))*100 / dynMtotsp
+    res <- cbind(res, frac)
+  }
+  names(res) <- c("MStot_esp","t", "dec10", "dec9", "dec8", "dec7", "dec6", "dec5", "dec4", "dec3", "dec2", "dec1")
+
+  res
+}
+#proportion de MStot de l'espece par decile a chaque t
+
+
+#' This function ...
+#'
+#' @export
+BuildResDecil <- function(MStot, sp_tabSD, param_name="")
+{
+  #fonction pour calculer les decile /sp et a partir des tabSP (avec decile pour 1 parametre donne)
+
+  #sp_tabSD <- split(resread[["ls_tabSD"]][[1]], resread[["ls_tabSD"]][[1]]$name)
+  #MStot <- resread[["ls_MStot"]][[1]]
+
+  sp <- names(sp_tabSD)[1]#"Fix0"
+  x1 <- Build_EvolProportions(MStot, sp_tabSD, sp)
+  IDlastday <- dim(x1)[1]
+  #dec1 <- sum(x1[IDlastday,c(3)])
+  dec3_1 <- sum(x1[IDlastday,c(3:5)])
+  dec5_1 <- sum(x1[IDlastday,c(3:7)])
+
+  sp <- names(sp_tabSD)[2]#"Fix1"
+  x2 <- Build_EvolProportions(MStot, sp_tabSD, sp)
+  IDlastday <- dim(x2)[1]
+  dec3_2 <- sum(x2[IDlastday,c(3:5)])
+  dec5_2 <- sum(x2[IDlastday,c(3:7)])
+
+  res <- data.frame(dec3_1, dec5_1, dec3_2, dec5_2)
+  names(res) <- paste(c("dec3", "dec5", "dec3", "dec5"), param_name, c(names(sp_tabSD)[1], names(sp_tabSD)[1], names(sp_tabSD)[2], names(sp_tabSD)[2]),  sep="_")
+
+  res
+  #
+}
+#for last day IDlastday / decil 3 et decile5
+# IDlastday par defaut, mais rendre possible de passer un ID en argument?
+
+
+
+
+#' This function ...
+#'
+#' @export
+ls_idvois_ordre1 <- function(n, cote, nblignes)
+{
+  # pour une plante n, dans un dispocitif regulier arrange en colonnes croissantes de cote indiv
+  nbindiv <- cote * nblignes
+  ls_defaut <- c(n - (cote + 1), n - cote, n - (cote - 1), n - 1, n + 1, n + (cote - 1), n + cote, n + (cote + 1))
+
+  if (n %% cote == 0)  # bord haut
+  {
+    ls_defaut[1] <- ls_defaut[1] + cote
+    ls_defaut[4] <- ls_defaut[4] + cote
+    ls_defaut[6] <- ls_defaut[6] + cote
+  }
+
+  if ((n + 1) %% cote == 0)  # bord bas
+  {
+    ls_defaut[3] <- ls_defaut[3] - cote
+    ls_defaut[5] <- ls_defaut[5] - cote
+    ls_defaut[8] <- ls_defaut[8] - cote
+  }
+
+
+  for (i in 1:length(ls_defaut))
+  {
+    if (ls_defaut[i] < 0)  # bord gauche
+    {ls_defaut[i] <- ls_defaut[i] + nbindiv}
+
+    if (ls_defaut[i] >= nbindiv)  # bord droit
+    {ls_defaut[i] <- ls_defaut[i] - nbindiv}
+  }
+
+  ls_defaut
+}
+#fonction pour determiner l'id des voisins d'ordre 1
+#ls_idvois_ordre1(9,6,4)#marche pas pour zero
+#pour ordre 2: voisin d'ordre 1 de tous tes voisins!
+#!! prevu pour id python commencant a zero
+
+
+#' This function ...
+#'
+#' @export
+def_indice_vois5050 <- function(cote, nblignes)
+{
+  #id des voisins pour un damier a 50/50 (1 sur 2 est un Kin/nonKin)
+
+  #cote <- 16
+  #nblignes <- 16
+
+  ls_idvois <- vector("list", length=(cote*nblignes))
+  names(ls_idvois) <- 1:(cote*nblignes)
+  ls_idKin <- vector("list", length=(cote*nblignes))
+  names(ls_idKin) <- 1:(cote*nblignes)
+  ls_idnonKin <- vector("list", length=(cote*nblignes))
+  names(ls_idnonKin) <- 1:(cote*nblignes)
+
+  for (i in 1:(cote*nblignes))
+  {
+    idvois <- ls_idvois_ordre1(i-1, cote, nblignes) +1 # appel avec i-1 (pour comme nump python) # ajout 1 a sortie pour rang R
+    ls_idvois[[i]] <- idvois
+    ls_idKin[[i]] <- idvois[c(1,3,6,8)]
+    ls_idnonKin[[i]] <- idvois[c(2,4,5,7)]
+  }
+
+  list(ls_idvois, ls_idKin, ls_idnonKin)
+}
+#ls_idv <- def_indice_vois5050(cote=16, nblignes=16)
+#ls_idvois <- ls_idv[[1]]
+#ls_idKin <- ls_idv[[2]]
+#ls_idnonKin <- ls_idv[[3]]
+#a generaliser pour autres configuations que 50/50 pour ls_idKin, ls_idnonKin (ou a lire qqs part!)
+
+
+
+#' This function ...
+#'
+#' @export
+calc_norm_par <- function(tabpar,lspar, plot_=F, main_="")
+{
+  # fonction pour Calcul des valeur normalisee (par la moyenne) des parametresSD et la moyenne des valeurs normalisee
+  # avec plot_ a True et les coord x,y,  fait un graph de visu
+
+  nbpar <- length(lspar)
+  ls_resNorm <- vector("list", length=(nbpar+1))
+  names(ls_resNorm) <- c(lspar, "mean_norm_par")
+
+  ls_col_ <- 1:nbpar #a passer en argument eventuellement
+
+
+  Val_par <- tabpar[,c(lspar[1])]
+  #normalise par la moyenne (de ce qui est donne en entree: communaute ou population)
+  norm_par <- Val_par/mean(Val_par)
+  ls_resNorm[[lspar[1]]] <- norm_par
+  mean_norm_par <- norm_par
+
+  if (plot_ == T)
+  {plot(tabpar$x, tabpar$y, cex=1.5*norm_par,col="blue", main=main_,xlab="",ylab="")}
+
+  for (i in 2:nbpar)
+  {
+    Val_par <- tabpar[,c(lspar[i])]
+    norm_par <- Val_par/mean(Val_par)
+    ls_resNorm[[lspar[i]]] <- norm_par
+    mean_norm_par <- mean_norm_par+norm_par
+
+    if (plot_ == T)
+    {points(tabpar$x, tabpar$y, cex=1.5*norm_par,col=ls_col_[i])}
+
+  }
+  ls_resNorm[["mean_norm_par"]] <- mean_norm_par/nbpar
+  names(ls_resNorm)[1:nbpar] <- paste(lspar,"Norm", sep="")
+  ls_resNorm <- as.data.frame(ls_resNorm)
+  ls_resNorm
+}
+
+#ls_resNorm <- calc_norm_par(x ,lspar, plot_=F)
+#ParamNorm <- calc_norm_par(temptab[,lspar] ,lspar, plot_=F)$mean_norm_par
+
+
+
+
+#' This function ...
+#'
+#' @export
+calc_neighb_param <- function(tabpar,lspar, ls_idvois, ls_idKin, ls_idnonKin, cote=16, nblignes=16)
+{
+  #calculate average parameter value of order 1 neighbours, with kin and non kin in a binary mixture
+  #can be used for any vector and any list of lspar (not only parameters)
+
+  nbpar <- length(lspar)
+  ls_res <- vector("list", length=nbpar)
+  names(ls_res) <- c(lspar)
+
+  for (param_name in lspar)
   {
 
-    if (is.na(esp))
-    {dat <- ltoto[[usm]]
-    } else
+    #param_name <- lspar[1]
+    Val_param <- tabpar[,c(param_name)]
+
+
+    ParaMvois <- NULL
+    ParaMKin <- NULL
+    ParaMnonKin <- NULL
+    for (i in 1:(cote*nblignes))
     {
-      #garde uniquement col esp
-      nomcol <- names(ltoto[[usm]])
-      idcols <- grepl(esp, nomcol)
-      dat <- cbind(ltoto[[usm]][,c(1:2)], ltoto[[usm]][,idcols])
+      #ALL ordre 1
+      ParaMvois <- cbind(ParaMvois, mean(Val_param[ls_idvois[[i]]]))
+      #Kin/NonKin
+      ParaMKin <- cbind(ParaMKin, mean(Val_param[ls_idKin[[i]]]) )
+      ParaMnonKin <- cbind(ParaMnonKin, mean(Val_param[ls_idnonKin[[i]]]) )
     }
+    ParaMvois <- as.numeric(ParaMvois)
+    ParaMKin <- as.numeric(ParaMKin)
+    ParaMnonKin <- as.numeric(ParaMnonKin)
 
-    nbplt <- length(dat)-2
-    xplt <- as.matrix(dat[dat$V1==var,3:(3+nbplt-1)], ncol=nbplt)
-    xsum <- rowSums(xplt)
-    res[[usm]] <- xsum
-  }
-  if (optSD==F)
-  {
-    #fait moyenne des sim
-    xav <- rowSums(as.data.frame(res))/length(lsusm)
-  }else
-  {
-    #calcule standard deviation des sim
-    xav <- apply(as.data.frame(res),MARGIN=1,sd)
+    res <- data.frame(ParaMvois, ParaMKin, ParaMnonKin)
+    names(res) <- paste(param_name, c("Mvois", "MKin", "MnonKin"), sep="")
+
+
+    ls_res[[param_name]] <- res
+
   }
 
-  xav
+  res <- as.data.frame(ls_res)
+  names(res) <- as.character(as.data.frame(t(as.data.frame(strsplit(names(res),"\\."))))$V2)
+
+  res
 }
-#LAI <- moysimval(ltoto, lsusm=names(ltoto), var='SurfPlante')/ surfsolref
-#LAIsd <- moysimval(ltoto, lsusm=names(ltoto), var='SurfPlante',optSD=T)/ surfsolref
+#pourrait prevoir de mettre ls_idvois, ls_idKin, ls_idnonKin dans la table d'entree au prelablable
+#lire cote et nblignes autrement??
+#calc_neighb_param(x,lspar, ls_idvois, ls_idKin, ls_idnonKin)
 
 
 
 
 
-#' Calculate the the average or standard deviation of a series of simulations for a set of predefined variables
-#'
-#' @param ltoto A list of data frames. Each element of this list correspond to the simulation output of a single USM
-#' @param lsusm The list of USMs to consider in ltoto
-#' @param esp An optional parameter to specify the name of a species to consider in case of multi-species simulations
-#' @param optSD An optional parameter to specify if standard deviation should be calculated instead of mean
-#'
-#' @return A simmoy data.frame with variables : STEPS, TT, NBI, NBphyto, LAI, MSA, MSArec, MSAnonrec, MSpiv, MSracfine, MSrac, RDepth, Hmax, FTSW, NNI, R_DemandC_Root, cutNB, Npc_aer, Ndfa, Epsi, NBsh
-#' @export
-#' @examples
-#' ltoto <- ltoto_exemple
-#' simmoy <- build_simmoy(ltoto, lsusm=names(ltoto))
-#' plot(simmoy$STEPS, simmoy$NBI, type='l')
-build_simmoy <- function(ltoto, lsusm, esp=NA, optSD=F)
+Calc_MSindiv_Corr <- function(ltoto, ls_toto_paquet, ls_paramSD, lspar=c("Len","Lfeuille","phyllochron", "Vmax2", "ELmax", "PPtreshh"))
 {
-  #moy des simul des differentes graines d'un meme usm avec moysimval (pour variables dynamiques)
+  ## fonction pour mettre en forme valeurs de parametres normalise, valeur d'effet de voisinnage, et calculer les correlations entre indices
 
-  #recup info generale sur la premier usm
-  #dat <- ltoto[[lsusm[1]]]
-  if (is.na(esp))
-  {dat <- ltoto[[lsusm[1]]]
-  } else
+  #key <- names(sp_dtoto)[260]#[330]#[16]#[3]#[31]#[19]#
+  #ls_toto_paquet <- sp_dtoto[[key]]$name
+  #ltoto <- read_ltoto(ls_toto_paquet)
+  #names(ltoto[[ls_toto_paquet]])
+  #ltoto[[ls_toto_paquet]]$V1
+  dat <- ltoto[[ls_toto_paquet]]
+  nb <- dim(dat)[2]-2
+
+  #lspar <-  c("Len","Lfeuille","phyllochron", "Vmax2", "ELmax", "PPtreshh")
+  param_name <- "phyllochron"#"Len"#ls_par[1] #pour exemple, pas utilise
+  resread <- read_lsSD_MStot(ltoto, ls_paramSD, param_name)
+  sp_tabSD <- split(resread[["ls_tabSD"]][[1]], resread[["ls_tabSD"]][[1]]$name)
+  MStot <- resread[["ls_MStot"]][[1]]
+  #res <- BuildResDecil(MStot, sp_tabSD)
+
+  #c(187,229,282,334) #dates de coupes fixes
+  MStot_ini <- as.numeric(MStot[60,])#30
+  MStot_coupe1 <- as.numeric(MStot[127,])#65
+  MStot_coupe2 <- as.numeric(MStot[169,])#100
+  MStot_coupe3 <- as.numeric(MStot[222,])#150
+  MStot_fin <- as.numeric(MStot[dim(MStot)[1],])
+  #MStot_coupe4 <- as.numeric(MStot[200,])
+  #MStot_coupe5 <- as.numeric(MStot[250,])
+  #hist(MStot_fin, main=key)
+  #hist(MStot_coupe1, main=key)
+
+  #temptab <- resread[["ls_tabSD"]][[1]][, c("nump","name","x","y","retard","Len","Vmax2","ELmax","Lfeuille","phyllochron","PPtreshh")]
+  temptab <- resread[["ls_tabSD"]][[1]][, c("nump","name","retard","Len","Vmax2","ELmax","Lfeuille","phyllochron","PPtreshh")]
+
+
+  #ordonne dans l'ordre des nump!!
+  temptab <- temptab[order(temptab$nump),]
+
+
+  #Val_param <- temptab[,c(param_name)]#temptab$phyllochron
+  #Val_param <- temptab$Len
+  #hist(Val_param, main=key)
+
+  #calcul de la valeur normalisee des parametres (multi-trait)
+  temptab$phyllochron[temptab$phyllochron<8] <- 8 #pour les valeur <0 mise a 10-10!
+  temptab$phyllochron <- 1/(temptab$phyllochron)
+  temptab$PPtreshh <- 24-temptab$PPtreshh
+  ParamAllNorm <- calc_norm_par(temptab[,lspar] ,lspar, plot_=F)$mean_norm_par
+  temptab$ParamAllNorm <- ParamAllNorm
+
+  #agrege par Light / N (specifique papier beatrice)
+  lightPar <- c("Len","Lfeuille","phyllochron")
+  ParamLightNorm <- calc_norm_par(temptab[,lightPar] ,lightPar, plot_=F)$mean_norm_par
+  temptab$ParamLightNorm <- ParamLightNorm
+  NPar <- c("Vmax2", "ELmax", "PPtreshh")
+  ParamNNorm <- calc_norm_par(temptab[,NPar] ,NPar, plot_=F)$mean_norm_par
+  temptab$ParamNNorm <- ParamNNorm
+
+
+
+  #calcul des moyenne des voisins
+  x <- temptab[,c(lspar,"ParamAllNorm","ParamLightNorm","ParamNNorm")]
+  #transforme param phyllochrone et PPtreshh pour avoir effet positif pour valeur croissante
+
+
+  resN <- calc_neighb_param(x,c(lspar,"ParamAllNorm","ParamLightNorm","ParamNNorm"), ls_idvois, ls_idKin, ls_idnonKin)
+  temptab <- cbind(temptab, resN)
+  #caluler les difference pour sp1 et sp2
+  temptab$diffMvoisNorm <- temptab$ParamAllNormMvois - temptab$ParamAllNorm
+  temptab$diffMKinNorm <- temptab$ParamAllNormMKin - temptab$ParamAllNorm
+  temptab$diffMnonKinNorm <- temptab$ParamAllNormMnonKin - temptab$ParamAllNorm
+  temptab$diffMvoisLightNorm <- temptab$ParamLightNormMvois - temptab$ParamLightNorm
+  temptab$diffMvoisNNorm <- temptab$ParamNNormMvois - temptab$ParamNNorm
+
+
+  #recup PARiPlante et N uptake plante et faire cumul
+  PARi <- dat[dat$V1=='PARiPlante',3:(3+nb-1)] #
+  for (i in 1:nb) {PARi[,i] <- cumsum(PARi[,i])}
+  Nuptake <- dat[dat$V1=='Nuptake_sol',3:(3+nb-1)] #sans fixation!!!
+  for (i in 1:nb) {Nuptake[,i] <- cumsum(Nuptake[,i])}
+  PARi_fin <- as.numeric(PARi[dim(PARi)[1],])
+  Nuptake_fin <- as.numeric(Nuptake[dim(Nuptake)[1],])
+
+
+  #calcul du cumul de biomasse, note moyenne, uptake des voisins
+  MScumvois <- NULL
+  MScumKin <- NULL
+  MScumnonKin <- NULL
+  PARivois <- NULL
+  PARiKin <- NULL
+  PARinonKin <- NULL
+  Nuptakevois <- NULL
+  NuptakeKin <- NULL
+  NuptakenonKin <- NULL
+  for (i in 1:(cote*nblignes))
   {
-    #garde uniquement col esp
-    nomcol <- names(ltoto[[lsusm[1]]])
-    idcols <- grepl(esp, nomcol)
-    dat <- cbind(ltoto[[lsusm[1]]][,c(1:2)], ltoto[[lsusm[1]]][,idcols])
+    #ALL ordre 1
+    MSvois <- sum(MStot_fin[ls_idvois[[i]]])
+    MScumvois <- cbind(MScumvois, MSvois)
+    PARivois <- cbind(PARivois, sum(PARi_fin[ls_idvois[[i]]]) )
+    Nuptakevois <- cbind(Nuptakevois, sum(Nuptake_fin[ls_idvois[[i]]]) )
+
+    #Kin/NonKin
+    MScumKin <- cbind(MScumKin, sum(MStot_fin[ls_idKin[[i]]]))
+    MScumnonKin <- cbind(MScumnonKin, sum(MStot_fin[ls_idnonKin[[i]]]))
+    PARiKin <- cbind(PARiKin, sum(PARi_fin[ls_idKin[[i]]]) )
+    NuptakeKin <- cbind(NuptakeKin, sum(Nuptake_fin[ls_idKin[[i]]]) )
+    PARinonKin <- cbind(PARinonKin, sum(PARi_fin[ls_idnonKin[[i]]]) )
+    NuptakenonKin <- cbind(NuptakenonKin, sum(Nuptake_fin[ls_idnonKin[[i]]]) )
+
   }
-
-  TT <- dat[dat$V1=='TT',3] #peut changer selon les plantes!
-  STEPS <- dat[dat$V1=='TT',2]
-  nbplt <- length(dat)-2
-  surfsolref <- dat[dat$V1=='pattern',3] #m2
-  ls_varOUT <- unique(dat$V1)
-
-  # TT et STEPS variables obligatoires
-  simmoy <- data.frame(STEPS, TT)
-
-  if ('SurfPlante' %in% ls_varOUT)
-  { simmoy$LAI <- moysimval(ltoto, lsusm, var='SurfPlante', esp, optSD)/ surfsolref }
-  if ('MSaerien' %in% ls_varOUT)
-  { simmoy$MSA <- moysimval(ltoto,lsusm, var='MSaerien', esp, optSD)/ surfsolref }
-  if ('MSaerienRec' %in% ls_varOUT)
-  { simmoy$MSArec <- moysimval(ltoto,lsusm, var='MSaerienRec', esp, optSD)/ surfsolref }
-  if ('MSaerienNonRec' %in% ls_varOUT)
-  { simmoy$MSAnonrec <- moysimval(ltoto,lsusm, var='MSaerienNonRec', esp, optSD)/ surfsolref}
-  if ('MS_pivot' %in% ls_varOUT)
-  { simmoy$MSpiv <- moysimval(ltoto,lsusm, var='MS_pivot', esp, optSD)/ surfsolref }
-  if ('MS_rac_fine' %in% ls_varOUT)
-  { simmoy$MSracfine <- moysimval(ltoto,lsusm, var='MS_rac_fine', esp, optSD)/ surfsolref}
-  if ('MS_pivot' %in% ls_varOUT & 'MS_rac_fine' %in% ls_varOUT)
-  {  simmoy$MSrac <- simmoy$MSpiv + simmoy$MSracfine }
-
-  if ('NBI' %in% ls_varOUT)
-  {
-    NBI <- moysimval(ltoto,lsusm, var='NBI', esp, optSD)/ nbplt
-    simmoy$NBI <- pmax(0, NBI - 0.75) #correction des simuls pour les comptages decimaux
-  }
-  #NBIquart <- quantsimval(ltoto,lsusm, var_='NBI',esp=esp)
-
-  if ('NBphyto' %in% ls_varOUT)
-  { simmoy$NBphyto <- moysimval(ltoto, lsusm, var='NBphyto', esp, optSD)/ surfsolref}
-  if ('NBapexAct' %in% ls_varOUT)
-  { simmoy$Nbapex <- moysimval(ltoto, lsusm, var='NBapexAct', esp, optSD)/ surfsolref }
-  if ('NBphyto' %in% ls_varOUT & 'NBapexAct' %in% ls_varOUT)
-  { simmoy$NBphyto <- pmax(0,simmoy$NBphyto - 0.5*simmoy$Nbapex) }
-  #correction simuls pour les comptages decimaux
-
-  if ('NBsh' %in% ls_varOUT)
-  { simmoy$NBsh <- moysimval(ltoto, lsusm, var='NBsh', esp, optSD)/ surfsolref}
-  if ('RDepth' %in% ls_varOUT)
-  { simmoy$RDepth <- moysimval(ltoto,lsusm, var='RDepth', esp, optSD)/ nbplt}
-  if ('Hplante' %in% ls_varOUT)
-  { simmoy$Hmax <- moysimval(ltoto,lsusm, var='Hplante', esp, optSD)/ nbplt}
-  if ('FTSW' %in% ls_varOUT)
-  { simmoy$FTSW <- moysimval(ltoto,lsusm, var='FTSW', esp, optSD)/ nbplt}
-  if ('NNI' %in% ls_varOUT)
-  { simmoy$NNI <- moysimval(ltoto,lsusm, var='NNI', esp, optSD)/ nbplt}
-  if ('R_DemandC_Root' %in% ls_varOUT)
-  { simmoy$R_DemandC_Root <- moysimval(ltoto,lsusm, var='R_DemandC_Root', esp, optSD)/ nbplt}
-  if ('cutNB' %in% ls_varOUT)
-  { simmoy$cutNB <- moysimval(ltoto,lsusm, var='cutNB', esp, optSD)/ nbplt}
-  if ('Npc_aer' %in% ls_varOUT)
-  {
-    simmoy$Npc_aer <- moysimval(ltoto,lsusm, var='Npc_aer', esp, optSD)/ nbplt
-    #!! reprendre et ponderer par biomasse aerienne!!
-  }
-  if ('Ndfa' %in% ls_varOUT)
-  {
-    simmoy$Ndfa <- moysimval(ltoto,lsusm, var='Ndfa', esp, optSD)/ nbplt
-    #!! reprendre et ponderer par biomasse aerienne!!
-  }
-  if ('epsi' %in% ls_varOUT)
-  { simmoy$Epsi <- moysimval(ltoto,lsusm, var='epsi', esp, optSD)}
+  MScumvois <- as.numeric(MScumvois)
+  PARivois <- as.numeric(PARivois)
+  Nuptakevois <- as.numeric(Nuptakevois)
+  MScumKin <- as.numeric(MScumKin)
+  MScumnonKin <- as.numeric(MScumnonKin)
+  PARiKin <- as.numeric(PARiKin)
+  NuptakeKin <- as.numeric(PARiKin)
+  PARinonKin <- as.numeric(PARinonKin)
+  NuptakenonKin <- as.numeric(PARinonKin)
 
 
-  simmoy
+  dfMS <- data.frame(nump=temptab$nump, MStot_fin, MStot_ini, MStot_coupe1,MStot_coupe2,MStot_coupe3,PARi=PARi_fin, Nuptake=Nuptake_fin, MScumvois, MScumKin, MScumnonKin, PARivois, PARiKin, PARinonKin, Nuptakevois, NuptakeKin, NuptakenonKin)
+  #ratio de capture des ressources avec voisins
+  dfMS$ratioLight <- PARi_fin/PARivois
+  dfMS$ratioNupt <- Nuptake_fin/Nuptakevois
+  #EcardPotentiel <-  MStot_fin/mean(MStot_fin) - ParamAllNorm #pas tres logique en multitrait / simple trait
+
+
+  temptab <- merge(temptab, dfMS, by="nump")
+
+
+  #correlation MSindiv avec valeur des parametres / valeur des voisins / ecart des voisins / ressources / ressources des voisins
+  #subx <- temptab[,5:dim(temptab)[2]]#new: avec x,y
+  subx <- temptab[,3:dim(temptab)[2]]#old: sans x,y
+  rescor <- as.data.frame(cor(subx))
+  valcorAll <- rescor$MStot_fin
+  #barplot(valcorAll, names.arg =row.names(rescor), las=3,cex.names=0.6,main=key)
+
+  #faire un data.frame de ca
+  res <- data.frame(t(valcorAll))
+  names(res) <- paste("Cor_", row.names(rescor),sep="")
+
+  #Corr par espece
+  s_temp <- split(temptab, temptab$name)
+  sp <- names(s_temp)[1]#"Fix0"
+  #subx <- s_temp[[sp]][,5:dim(temptab)[2]]#new: avec x,y
+  subx <- s_temp[[sp]][,3:dim(temptab)[2]]#old: sans x,y
+  rescor <- as.data.frame(cor(subx))
+  valcorSp1 <- rescor$MStot_fin
+  res1 <- data.frame(t(valcorSp1))
+  names(res1) <- paste(sp,"_Cor_", row.names(rescor),sep="")
+
+  sp <- names(s_temp)[2]#"Fix1"
+  #subx <- s_temp[[sp]][,5:dim(temptab)[2]]#new: avec x,y
+  subx <- s_temp[[sp]][,3:dim(temptab)[2]]#old: sans x,y
+  rescor <- as.data.frame(cor(subx))
+  valcorSp2 <- rescor$MStot_fin
+  res2 <- data.frame(t(valcorSp2))
+  names(res2) <- paste(sp,"_Cor_", row.names(rescor),sep="")
+  ##barplot(valcorSp2, names.arg =row.names(rescor), las=3,cex.names=0.6,main=key)
+
+  res <- cbind(res,res1,res2)
+  res$key <- key
+
+  res
+
+  #renvoie aussi du tableau des donnees : temptab
+  ls_resOK <- list(res, temptab)
+  names(ls_resOK) <- c("tabCorMSindiv", "datIndices")
+  ls_resOK
 
 }
-#version revue par Lucas tient cmpte du nom de l'espece dans les assos
-#simmoy <- build_simmoy(ltoto, lsusm=names(ltoto))
-#simmoy <- build_simmoy(ltoto, lsusm=names(ltoto), esp="timbale")
-
-
-
-
-
-# build_simmoy_old <- function(ltoto, lsusm, esp=NA, optSD=F)
-# {
-#   #moy des simul des differentes graines d'un meme usm avec moysimval (pour variables dynamiques)
-#
-#   #recup info generale sur la premier usm
-#   #dat <- ltoto[[lsusm[1]]]
-#   if (is.na(esp))
-#   {dat <- ltoto[[lsusm[1]]]
-#   } else
-#   {
-#     #garde uniquement col esp
-#     nomcol <- names(ltoto[[lsusm[1]]])
-#     idcols <- grepl(esp, nomcol)
-#     dat <- cbind(ltoto[[lsusm[1]]][,c(1:2)], ltoto[[lsusm[1]]][,idcols])
-#   }
-#
-#   TT <- dat[dat$V1=='TT',3] #peut changer selon les plantes!
-#   STEPS <- dat[dat$V1=='TT',2]
-#   nbplt <- length(dat)-2
-#   surfsolref <- dat[dat$V1=='pattern',3] #m2
-#
-#   LAI <- moysimval(ltoto, lsusm, var='SurfPlante', esp, optSD)/ surfsolref
-#   MSA <- moysimval(ltoto,lsusm, var='MSaerien', esp, optSD)/ surfsolref
-#   MSArec <- moysimval(ltoto,lsusm, var='MSaerienRec', esp, optSD)/ surfsolref
-#   MSAnonrec <- moysimval(ltoto,lsusm, var='MSaerienNonRec', esp, optSD)/ surfsolref
-#   MSpiv <- moysimval(ltoto,lsusm, var='MS_pivot', esp, optSD)/ surfsolref
-#   MSracfine <- moysimval(ltoto,lsusm, var='MS_rac_fine', esp, optSD)/ surfsolref
-#   MSrac <- MSpiv + MSracfine
-#   NBI <- moysimval(ltoto,lsusm, var='NBI', esp, optSD)/ nbplt
-#   NBI <- pmax(0, NBI - 0.75) #correction des simuls pour les comptages decimaux
-#   #NBIquart <- quantsimval(ltoto,lsusm, var_='NBI',esp=esp)
-#   NBphyto <- moysimval(ltoto, lsusm, var='NBphyto', esp, optSD)/ surfsolref
-#   Nbapex <- moysimval(ltoto, lsusm, var='NBapexAct', esp, optSD)/ surfsolref
-#   NBphyto <- pmax(0,NBphyto - 0.5*Nbapex) #correction simuls pour les comptages decimaux
-#   NBsh <- moysimval(ltoto, lsusm, var='NBsh', esp, optSD)/ surfsolref
-#
-#   RDepth <- moysimval(ltoto,lsusm, var='RDepth', esp, optSD)/ nbplt
-#   Hmax <- moysimval(ltoto,lsusm, var='Hplante', esp, optSD)/ nbplt
-#   FTSW <- moysimval(ltoto,lsusm, var='FTSW', esp, optSD)/ nbplt
-#   NNI <- moysimval(ltoto,lsusm, var='NNI', esp, optSD)/ nbplt
-#   R_DemandC_Root <- moysimval(ltoto,lsusm, var='R_DemandC_Root', esp, optSD)/ nbplt
-#   cutNB <- moysimval(ltoto,lsusm, var='cutNB', esp, optSD)/ nbplt
-#   Npc_aer <- moysimval(ltoto,lsusm, var='Npc_aer', esp, optSD)/ nbplt
-#   Ndfa <- moysimval(ltoto,lsusm, var='Ndfa', esp, optSD)/ nbplt
-#   Epsi <- moysimval(ltoto,lsusm, var='epsi', esp, optSD)
-#
-#   simmoy <- data.frame(STEPS, TT, NBI, NBphyto, LAI, MSA, MSArec, MSAnonrec, MSpiv, MSracfine, MSrac, RDepth, Hmax, FTSW, NNI, R_DemandC_Root, cutNB, Npc_aer,Ndfa,Epsi,NBsh)
-#   simmoy
-# }#version revue par Lucas tient cmpte du nom de l'espece dans les assos
-#
-# #simmoy <- build_simmoy(ltoto, lsusm=names(ltoto))
-# #simmoy <- build_simmoy(ltoto, lsusm=names(ltoto), esp="timbale")
-# #a revoir avec liste de variables a checker + test pour rendre plus plastique
-#
-
-
-
-
-
-
+#distinguer 2 fonctions? voir 3?: mef et calcul des correlations?
+#ls_res_cor_i <- Calc_MSindiv_Corr(ltoto, ls_toto_paquet, ls_paramSD, lspar=c("Len","Lfeuille","phyllochron", "Vmax2", "ELmax", "PPtreshh"))
+#ls_res_cor_i[["tabCorMSindiv"]]
+#ls_res_cor_i[["datIndices"]]
 
 
 

@@ -7,7 +7,7 @@
 moysimval(ltoto, lsusm, var, esp = NA, optSD = F)
 }
 \arguments{
-\item{ltoto}{A list of data frames. Each element of this list correspond to the simulation output of a single USM}
+\item{ltoto}{A list of data frames. Each element of this list correspond to the dynamic simulation output of a single USM}
 
 \item{lsusm}{The list of USMs to consider in ltoto}
 
