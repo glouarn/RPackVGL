@@ -108,9 +108,9 @@ head(df_bilan0)
 names(df_bilan0)
 
 
-plot(df_bilan0$dMSaer, main="dMSaer", type='l')
+plot(df_bilan0$DOY, df_bilan0$dMSaer, main="dMSaer", type='l')
 
-# ?? pas de DOY/steps dans bilanN?? + revoir certaines sortie
+# ?? pas de DOY/steps dans bilanN?? + revoir certaines sortie ->OK, fait!
 
 
 ```
