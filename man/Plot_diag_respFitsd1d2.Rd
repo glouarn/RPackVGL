@@ -38,4 +38,5 @@ resg <- Calc_Gamma_coeffesp12(diag, iso1, iso2, res1, res2)
 parameters1 <- resg[["parameters1"]]
 parameters2 <- resg[["parameters2"]]
 Plot_diag_respFitsd1d2(diag, parameters1, parameters2, dmax=400.)
+
 }

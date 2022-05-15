@@ -39,4 +39,5 @@ parameters1 <- resg[["parameters1"]]
 parameters2 <- resg[["parameters2"]]
 Plot_OneOne_Resp_dtot(one_one, parameters1, parameters2, dmax=400.)
 Plot_OneOne_prop(one_one, parameters1, parameters2, dmax=400.)
+
 }

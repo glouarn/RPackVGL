@@ -26,4 +26,5 @@ dat <- rbind(sp_dtoto[[key]], sp_dtoto[[keypur]])
 pur1 <- dat[dat$densite2 == 0., ]
 res1 <- Calc_Beta_coeff(pur1)
 Plt_Yresp_densite1(pur1, res1, main="", xlab="densite 1", ylab="Ytot")
+
 }

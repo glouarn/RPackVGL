@@ -8,7 +8,8 @@ Plot2D_soilVar(
   dat,
   var_ = "FTSW",
   epcouche = 5,
-  Boundarycols = c("blue", "red")
+  Boundarycols = c("blue", "red"),
+  vDOYs = NULL
 )
 }
 \arguments{
@@ -19,6 +20,8 @@ Plot2D_soilVar(
 \item{epcouche}{Soil voxel (cm)}
 
 \item{Boundarycols}{A vector of two color names defining the extremes of the gradient of values}
+
+\item{vDOYs}{A vector of DOY (Day of The Year) value to keep}
 }
 \value{
 2D spatio-temporal plot of soil variables from the outHR file
@@ -32,4 +35,6 @@ Plot2D_soilVar(dat, var_='FTSW')
 Plot2D_soilVar(dat, var_='HRp')
 Plot2D_soilVar(dat, var_='m_NO3', Boundarycols =c("brown", "green"))
 Plot2D_soilVar(dat, var_='m_NN4', Boundarycols =c("brown", "green"))
+Plot2D_soilVar(dat, var_='m_NO3', Boundarycols =c("brown", "green"), vDOYs=100:200)
+
 }

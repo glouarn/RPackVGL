@@ -61,6 +61,8 @@ Plot2D_soilVar(df_outHR, var_='HRp')
 Plot2D_soilVar(df_outHR, var_='m_NN4', Boundarycols =c("brown", "green"))
 Plot2D_soilVar(df_outHR, var_='m_NO3', Boundarycols =c("brown", "green"))
 
+#zoom zur certains DOYs 100 a 200
+Plot2D_soilVar(df_outHR, var_='m_NO3', Boundarycols =c("brown", "green"), vDOYs=100:200)
 
 ```
 

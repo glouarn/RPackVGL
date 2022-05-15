@@ -12,6 +12,7 @@
 #' @param var_ Name of the soil variable to plot
 #' @param epcouche Soil voxel (cm)
 #' @param Boundarycols A vector of two color names defining the extremes of the gradient of values
+#' @param vDOYs A vector of DOY (Day of The Year) value to keep
 #' @return 2D spatio-temporal plot of soil variables from the outHR file
 #' @export
 #' @examples
@@ -20,7 +21,9 @@
 #' Plot2D_soilVar(dat, var_='HRp')
 #' Plot2D_soilVar(dat, var_='m_NO3', Boundarycols =c("brown", "green"))
 #' Plot2D_soilVar(dat, var_='m_NN4', Boundarycols =c("brown", "green"))
-Plot2D_soilVar <- function(dat, var_='FTSW', epcouche=5., Boundarycols = c("blue", "red"))
+#' Plot2D_soilVar(dat, var_='m_NO3', Boundarycols =c("brown", "green"), vDOYs=100:200)
+#'
+Plot2D_soilVar <- function(dat, var_='FTSW', epcouche=5., Boundarycols = c("blue", "red"), vDOYs=NULL)
 {
 
   #plot spatio-temporel ftsw
@@ -30,9 +33,20 @@ Plot2D_soilVar <- function(dat, var_='FTSW', epcouche=5., Boundarycols = c("blue
   lscol <- colorRampPalette(Boundarycols)( 101 ) #palette de couleur
   sdat <- split(dat, dat$var)
 
+  if (is.null(vDOYs))
+  {
+    #pas de vDOYs indiques
+    DOYs <- sdat[[var_]]$DOY
+    vals <- sdat[[var_]][,c(-1,-2)]
+  } else
+  {
+    # vDOYs indique
+    id_keep <- sdat[[var_]]$DOY %in% vDOYs
+    DOYs <- sdat[[var_]]$DOY[id_keep]
+    vals <- sdat[[var_]][id_keep,c(-1,-2)]
+  }
 
-  DOYs <- sdat[[var_]]$DOY
-  vals <- sdat[[var_]][,c(-1,-2)]
+
   nbcouches <- dim(vals)[2]
   #normalisation
   if (var_ == 'm_NO3' | var_ == 'm_NN4')
@@ -84,6 +98,7 @@ Plot2D_soilVar <- function(dat, var_='FTSW', epcouche=5., Boundarycols = c("blue
 #' pur1 <- dat[dat$densite2 == 0., ]
 #' res1 <- Calc_Beta_coeff(pur1)
 #' Plt_Yresp_densite1(pur1, res1, main="", xlab="densite 1", ylab="Ytot")
+#'
 Plt_Yresp_densite1 <- function(x, res, ...)
 {
   #plot de la reponse a la densite d'une espece pure avec le coeff beta
@@ -126,6 +141,7 @@ Plt_Yresp_densite1 <- function(x, res, ...)
 #' parameters1 <- resg[["parameters1"]]
 #' parameters2 <- resg[["parameters2"]]
 #' Plot_diag_respFitsd1d2(diag, parameters1, parameters2, dmax=400.)
+#'
 Plot_diag_respFitsd1d2 <- function(x, parameters1, parameters2, dmax=400., ...)
 {
   # Plot des ajustement de gamma sur une diagonale de dispositif de deWit (substitution)
@@ -179,6 +195,7 @@ Plot_diag_respFitsd1d2 <- function(x, parameters1, parameters2, dmax=400., ...)
 #' parameters2 <- resg[["parameters2"]]
 #' Plot_OneOne_Resp_dtot(one_one, parameters1, parameters2, dmax=400.)
 #' Plot_OneOne_prop(one_one, parameters1, parameters2, dmax=400.)
+#'
 Plot_OneOne_Resp_dtot <- function(x, parameters1, parameters2, dmax=400., ...)
 {
   # Plot des ajustement de gamma sur la diagonale 1:1 (50/50 semis) (additif) - pour Ytot
@@ -227,6 +244,7 @@ Plot_OneOne_Resp_dtot <- function(x, parameters1, parameters2, dmax=400., ...)
 #' parameters2 <- resg[["parameters2"]]
 #' Plot_OneOne_Resp_dtot(one_one, parameters1, parameters2, dmax=400.)
 #' Plot_OneOne_prop(one_one, parameters1, parameters2, dmax=400.)
+#'
 Plot_OneOne_prop <- function(x, parameters1, parameters2, dmax=400., ...)
 {
   # Plot des ajustement de gamma sur la diagonale 1:1 (50/50 semis) (additif) - pour proportions d'especes
