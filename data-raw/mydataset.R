@@ -73,10 +73,17 @@ for(i in 1:8)
 paramsd_sd$x <- xx
 paramsd_sd$y <- yy
 
+
+
+#data test CE/SE
+path_rmixan <- system.file("extdata", "rmixan.csv", package = "RPackVGL")
+rmixan <- read.table(path_rmixan, header=T, sep=";", dec=".")
+
+
 # This should be the last line.
 # Note that names are unquoted.
 # I like using overwrite = T so everytime I run the script the
 # updated objects are saved, but the default is overwrite = F
-usethis::use_data(plt_par, toto, toto_0, outHR_0, BilanN_0, paramsd_0, tabtoto_compet, obs_exemple, ltoto_exemple, toto_sd, outHR_sd, BilanN_sd, paramsd_sd, overwrite = T)
+usethis::use_data(plt_par, toto, toto_0, outHR_0, BilanN_0, paramsd_0, tabtoto_compet, obs_exemple, ltoto_exemple, toto_sd, outHR_sd, BilanN_sd, paramsd_sd, rmixan,  overwrite = T)
 
 

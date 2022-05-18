@@ -216,6 +216,108 @@ Plot_resCE_SE(resCE_SE, ylim=c(-400,400), type='b', ylab="OYa", xlab="Prop1", ma
 
 
 
+## test calcul NBE / CE /SE
+
+```{r }
+
+
+#### TansfertN
+head(rmixan[,1:11])
+
+
+### figure CE / SE
+
+rmixan$RYl <- rmixan$rdtLuzasso / rmixan$rdtLuzpur
+rmixan$RYg <- rmixan$rdtFetasso / rmixan$rdtFetpur
+rmixan$RYTbis <- rmixan$propLuz*rmixan$RYl + (1-rmixan$propLuz)*rmixan$RYg
+rmixan$RYT <- rmixan$RYl + rmixan$RYg
+#? quel bon RYT?
+#RY: teorique?? = proportion an n-1 / an1=0.5
+rmixan$RYtheol <- 1#c(0.5, rmixan$propLuz)[1:(length(rmixan$propLuz))]#rmixan$propLuz
+rmixan$RYtheog <- 1#c(0.5, 1-rmixan$propLuz)[1:(length(rmixan$propLuz))]#1-rmixan$propLuz
+#rmixan$RYtheol <- rmixan$propLuz
+#rmixan$RYtheog <- 1-rmixan$propLuz
+
+
+#rmixan$deltaRYl <- rmixan$RYl - rmixan$RYtheol #pas bon -> cf plus loin
+#rmixan$deltaRYg <- rmixan$RYg - rmixan$RYtheog #pas bon -> cf plus loin
+
+
+rmixan$rdtLuzpur+rmixan$rdtFetpur #rdmt theo
+rmixan$rdtLuzasso+rmixan$rdtFetasso #rdmt vrai
+ecl <- rmixan$rdtLuzasso-rmixan$rdtLuzpur #ecart theo legumineuse
+ecg <- rmixan$rdtFetasso-rmixan$rdtFetpur #ecart theo graminee
+ecl+ecg #somme des delta = ce que je dois trouver
+
+#test avec Rdmt theo = somme des cultures pures
+RYtheol <- rmixan$propLuzAn_1 #0.5#1
+RYtheog <- 1-rmixan$propLuzAn_1 #0.5#1
+deltaRYl <- rmixan$RYl - RYtheol
+deltaRYg <- rmixan$RYg - RYtheog
+
+(rmixan$RYl*rmixan$rdtLuzpur + rmixan$RYg*rmixan$rdtFetpur) - (RYtheol*rmixan$rdtLuzpur + RYtheog*rmixan$rdtFetpur)
+deltaRYl*rmixan$rdtLuzpur + deltaRYg*rmixan$rdtFetpur
+
+
+
+
+rmixan$deltaRYl <- deltaRYl
+rmixan$deltaRYg <- deltaRYg
+
+
+vCE <- NULL
+vSE <- NULL
+for (idY in 1:dim(rmixan)[1])
+{
+  #idY <- 3
+  
+  ex_M <- as.numeric(rmixan[idY, c("rdtLuzpur","rdtFetpur")]) #rdmt en pur!!
+  ex_deltaRY <- as.numeric(rmixan[idY, c("deltaRYl","deltaRYg")])
+  
+  CE <- Calc_CEi(2,ex_M,ex_deltaRY)
+  SE <- Calc_SEi(2,ex_M,ex_deltaRY)
+  vCE <- rbind(vCE, CE)
+  vSE <- rbind(vSE, SE)
+}
+
+vCE + 0.5*vSE #yes, c'est bon!
+rmixan$CE <- as.numeric(vCE)
+rmixan$SE <- as.numeric(vSE)
+
+
+
+############ Fig  ##################"
+plot(rmixan$Coupe, (rmixan$CE+0.5*rmixan$SE), type='b',ylim=c(-800,1300), main="", ylab="Deviation from Ytheo (g.m-2)", xlab="Year of production", xlim=c(0.5,6.5), cex.lab=1.5, pch=0)
+polygon(c(1.5,2.5,2.5,1.5), c(-800, -800, 1300, 1300), col="grey90", border=NA)
+polygon(c(3.5,4.5,4.5,3.5), c(-800, -800, 1300, 1300), col="grey90", border=NA)
+polygon(c(5.5,6.5,6.5,5.5), c(-800, -800, 1300, 1300), col="grey90", border=NA)
+
+col1 <- rgb(0,0,1,1/4)#4
+x <- c(1., 1:6, 6.)
+y <- c(0, rmixan$CE,0)
+polygon(x,y,col=col1)
+col2 <- rgb(1,0,0,1/4)#2
+y <- c(0, 0.5*rmixan$SE,0)
+polygon(x,y,col=col2)
+points(rmixan$Coupe, (rmixan$CE+0.5*rmixan$SE), type='b', lwd=2,pch=0)
+
+text(1,1200,"2011")
+text(2,1200,"2012")
+text(3,1200,"2013")
+text(4,1200,"2014")
+text(5,1200,"2015")
+text(6,1200,"2016")
+
+
+legend(1.1,950, c("CE", "SE", "Y-Ytheo"),  lwd=c(2,2,2), pch=c(NA,NA,0), col=c(col1,col2,1),bty="n")
+
+
+
+
+```
+
+
+
 ## test overyielding sur desisgn de deWit?
 
 ```{r }
