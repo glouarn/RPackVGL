@@ -8,7 +8,7 @@
 
 #' This function reads the content of the simulation file "toto" of a series of USM and stocks the dynamic daily output into a list
 #'
-#' @param ls_toto A list of toto files paths
+#' @param totos A list of toto files paths or a data frame of corresponding zip and toto files
 #'
 #' @return A list of data frames. Each element of this list correspond to the simulation output of a single USM
 #' @export
@@ -20,21 +20,45 @@
 #'
 #' ls_toto <- c(path_ltoto1, path_ltoto2, path_ltoto3)
 #' my_ltoto <- read_ltoto(ls_toto)
-read_ltoto <- function(ls_toto)
+read_ltoto <- function(totos, dezip=F, var_="ls_toto")
 {
   #recuperer par paquet les fichiers toto du dossier de travail dans une liste ltoto
   # for dynamic daily outputs
-  ltoto <- vector('list', length(ls_toto))
-  names(ltoto) <- ls_toto
-
-  for (i in 1:length(ls_toto))
+  if (dezip==F)
   {
-    name <- ls_toto[i]
-    ltoto[[name]] <- read.table(name, header=T, sep=';')
+    # totos = liste des fichiers toto
+    ls_toto <- totos
+    ltoto <- vector('list', length(ls_toto))
+    names(ltoto) <- ls_toto
+
+    for (i in 1:length(ls_toto))
+    {
+      name <- ls_toto[i]
+      ltoto[[name]] <- read.table(name, header=T, sep=';')
+    }
   }
+  else
+  {
+    # totos = tableau correspondance des fichiers zip et toto
+    tab_f <- totos
+    ls_toto <- as.vector(tab_f[,var_]) #peut passer une autre variable si besoin
+
+    ltoto <- vector('list', length(ls_toto))
+    names(ltoto) <- ls_toto
+
+    for (i in 1:length(ls_toto))
+    {
+      name <- tab_f[i,var_]#[i]
+      zfile <- tab_f$ls_zip[i]
+      ltoto[[name]] <- read.table(unz(zfile, name), header=T, sep=';')
+    }
+
+  }
+
+
   ltoto
 }
-
+# acn also be used for reading list of other files: paramSD...
 
 
 #' This function reads the content of the simulation file "toto" and "paramSD" of a list of USM and stocks "ls_tabSD" and "ls_MStot"
@@ -428,15 +452,13 @@ build_simmoy <- function(ltoto, lsusm, esp=NA, optSD=F)
 ## fonction de mise en forme des tableau dtoto de synthese
 
 
-
-build_dtoto <- function(sp_dtoto, key, DOYdeb, DOYScoupe)
+#' This function ...calcul indices par espece
+#'
+#' @export
+build_dtoto_binarySim <- function(ltoto, dtotoBase, ls_toto_paquet, DOYdeb, DOYScoupe)
 {
-  ls_toto_paquet <- sp_dtoto[[key]]$name
 
-  #recuperation par paquet des fichiers de base (pas de stockage de l'ensemble des fichiers en memoire)
-  ltoto <- read_ltoto(ls_toto_paquet)
-  #version locale du paquet de doto
-  dtoto <- sp_dtoto[[key]]
+  dtoto <- dtotoBase#sp_dtoto[[key]]
 
   #recup du nom des esp
   mix <- strsplit(ls_toto_paquet[1], '_')[[1]][4] #suppose paquet fait par traitement
@@ -660,10 +682,405 @@ build_dtoto <- function(sp_dtoto, key, DOYdeb, DOYScoupe)
   dtoto
 
 }
-#fonction a generaliser et a bouger ailleurs
-# a reprendre -pour asso binaire
-# build synthetic df des valeur globale par simul
 
+
+
+
+
+#' This function ...calcul indices par espece pour un single zip file / unitary process
+#'
+#' @export
+build_dtoto_binary_zip1 <- function(zfile, DOYdeb=60, DOYScoupe=c(187,229,282,334), ls_parsd=c("Len","Lfeuille","phyllochron", "Vmax2", "ELmax", "PPtreshh"), cote=16, nblignes=16, opt_saveindices=F)
+{
+
+
+  ### traite un zfile
+
+  #zfile <- ls_zip[1]
+  #recup nom
+  nomf <- strsplit(zfile, '.zip')[[1]]
+  nomf <- strsplit(nomf, 'toto')[[1]][2]
+
+  #list file in the zip
+  lsf <- unzip(zipfile = zfile, list = TRUE)$Name
+  ls_toto <- lsf[grepl('toto_', lsf)]
+  ls_paramSD <- lsf[grepl('paramSD_', lsf)]
+
+  #table correspondance fichiers
+  tab_file <- data.frame(ls_zip=zfile, ls_toto, ls_paramSD)
+
+
+
+
+  # prepare dtotoBase  (11 col (avec sd))
+  cols_ <- strsplit(ls_toto, '_')
+  test_long <- as.numeric(lapply(cols_, length)) #pour separer selon nb de champs (avec sd)
+
+  dtoto <- as.data.frame(t(as.data.frame(cols_[test_long==11])))#as.data.frame(t(as.data.frame(strsplit(ls_toto, '_'))))#
+  row.names(dtoto) <- 1: length(dtoto[,1])
+  dtoto <- dtoto[,c(2,3,4,5,6,7,8,10)]
+  names(dtoto) <- c('usm','lsystem','mix','damier','scenario','Mng', 'seed','sd')
+  dtoto$name <- ls_toto[test_long==11]
+  dtoto$seed <- as.numeric(as.character(dtoto$seed))#substr(as.character(dtoto$seed), 1, 1)
+  dtoto$scenario <- substr(as.character(dtoto$scenario), 9, nchar(as.character(dtoto$scenario)))
+
+  #dtoto <- rbind(temp, dtoto) #merge des 2
+  dtoto$keysc <- paste(dtoto$scenario, dtoto$mix, dtoto$Mng, dtoto$sd)# ajout d'une cle unique par scenario
+  #dtoto$damier <- as.numeric(substr(as.character(dtoto$damier), 7, 7))
+
+  nomscenar <- as.data.frame(t(as.data.frame(strsplit(dtoto$scenario, "-"))))
+  names(nomscenar) <- c("scenario2", "scenario1")#inverse?
+  row.names(nomscenar) <- 1:length(nomscenar$scenario1)
+  dtoto$scenario1 <- as.character(nomscenar$scenario1)
+  dtoto$scenario2 <- as.character(nomscenar$scenario2)
+
+  #split de dtoto et stockage dans une liste de scenatios
+  dtoto$keysc <- paste(dtoto$keysc, dtoto$usm) #modif cle pour le cas histor
+  sp_dtoto <- split(dtoto, dtoto$keysc)
+
+  #pour recup des fichiers SD
+  ls_tabSDall <- vector("list", length(names(sp_dtoto)))
+  ls_MStotall <- vector("list", length(names(sp_dtoto)))
+
+  #pour recuperation des correlation MSindividuelles
+  ls_res_cor <- vector("list", length=length(names(sp_dtoto)))
+  names(ls_res_cor) <- names(sp_dtoto)
+
+
+
+
+  # traitement -> certaines a passer en input
+
+  # #pour intra (old a la fin si pb)
+  # DOYdeb<- 60
+  # #DOYScoupe <- c(165,199,231,271,334) #Avignon - an 1
+  # DOYScoupe <- c(187,229,282,334) #Lusignan - an 1
+  #
+  # ls_parsd <- c("Len","Lfeuille","phyllochron", "Vmax2", "ELmax", "PPtreshh")#c("Len","Vmax2", "ELmax", "Lfeuille", "phyllochron", "PPtreshh") #a lire dans fichier sd idealement
+
+  # #indices des voisins pour un damier 1*16 a 50/50
+  # cote <- 16
+  # nblignes <- 16
+  ls_idv <- def_indice_vois5050(cote, nblignes)
+  ls_idvois <- ls_idv[[1]]
+  ls_idKin <- ls_idv[[2]]
+  ls_idnonKin <- ls_idv[[3]]
+  # a generaliser si besoin!
+
+
+  # repris de boucle
+  key <- names(sp_dtoto)[1] #1 seule key
+
+  ls_toto_paquet <- sp_dtoto[[key]]$name
+  dtotoBase <- sp_dtoto[[key]]
+
+
+  #recuperation par paquet des fichiers de base (pas de stockage de l'ensemble des fichiers en memoire)
+  tab_f <- tab_file[tab_file$ls_toto %in% ls_toto_paquet,]
+  ltoto <- read_ltoto(tab_f, dezip=T, var_="ls_toto")
+
+  dtoto <- build_dtoto_binarySim(ltoto, dtotoBase, ls_toto_paquet, DOYdeb, DOYScoupe)
+
+  #remise du dtoto local dans sp_dtoto
+  sp_dtoto[[key]] <- dtoto
+
+  #lecture fichier SD et de tables MStot, puis calcul des indices de decile par esp et parametre
+  lparamSD<- read_ltoto(tab_f, dezip=T, var_="ls_paramSD")
+  names(lparamSD) <- names(ltoto) #remet noms de toto
+
+  resdec <- data.frame(key)
+  for (param_name in ls_parsd) #c("Len","Vmax2"))
+  {
+    #calcul decile /param
+    resread <- read_lsSD_MStot(ltoto, lparamSD, param_name)
+
+    #marche pour cas de resread simul unitaire
+    sp_tabSD <- split(resread[["ls_tabSD"]][[1]], resread[["ls_tabSD"]][[1]]$name)
+    MStot <- resread[["ls_MStot"]][[1]]
+    res <- BuildResDecil(MStot, sp_tabSD)
+
+    resdec <- cbind(resdec, res)
+
+  }
+
+
+
+  #calcul des correlations MSindividuelles
+  ls_res_cor_i <- Calc_MSindiv_Corr(ltoto, ls_toto_paquet, lparamSD, key, ls_idvois, ls_idKin, ls_idnonKin, cote, nblignes, lspar=ls_parsd)
+  ls_res_cor[[key]] <- ls_res_cor_i[["tabCorMSindiv"]]
+  tabindices <- ls_res_cor_i[["datIndices"]] #a sauvegarder eventuellement
+
+  #ajout variance locale
+  resdec$var_PARivois <- var(tabindices$PARi / (tabindices$PARivois/8))
+  resdec$var_PARiKin <- var(tabindices$PARi / (tabindices$PARiKin/4))
+  resdec$var_PARinonKin <- var(tabindices$PARi / (tabindices$PARinonKin/4))
+  ls_tabSDall[[key]] <- resdec
+
+
+  #optional
+  if (opt_saveindices==T)
+  {write.table(tabindices, paste("savetabindices ", key,".csv"), sep=";", col.names = T, row.names = F)}
+
+
+
+  #reagrege dtoto
+  dtoto <- do.call("rbind", sp_dtoto)
+  row.names(dtoto) <- 1:length(dtoto$usm)
+
+  dresdec <- do.call("rbind", ls_tabSDall)
+  row.names(dresdec) <- 1:dim(dresdec)[1]
+
+  res_cor <- do.call("rbind",ls_res_cor)
+  row.names(res_cor) <- 1:dim(res_cor)[1]
+
+  #pourquoi merge fonctionne pas?
+  dtoto <- cbind(dtoto, dresdec[,2:dim(dresdec)[2]])
+  dtoto <- cbind(dtoto, res_cor[,1:(dim(res_cor)[2]-1)])
+
+  #return
+  write.table(dtoto, paste("dtoto", nomf, ".csv", sep=""), sep=";", col.names = T, row.names = F)
+  list(dtoto=dtoto, key=key, name=ls_toto)
+}
+
+
+
+# separe lecture fichier de traitement et calcul ->build_dtoto_binarySim
+
+# build_dtoto <- function(sp_dtoto, key, DOYdeb, DOYScoupe)
+# {
+#   ls_toto_paquet <- sp_dtoto[[key]]$name
+#
+#   #recuperation par paquet des fichiers de base (pas de stockage de l'ensemble des fichiers en memoire)
+#   ltoto <- read_ltoto(ls_toto_paquet)
+#   #version locale du paquet de doto
+#   dtoto <- sp_dtoto[[key]]
+#
+#   #recup du nom des esp
+#   mix <- strsplit(ls_toto_paquet[1], '_')[[1]][4] #suppose paquet fait par traitement
+#   esp <- strsplit(mix, '-')[[1]][1] #'Fix2'
+#   esp2 <- strsplit(mix, '-')[[1]][2] #'nonFixSimTest'
+#
+#   #visu des rendement moyen m2 / a un DOY
+#   surfsolref <- NULL
+#   nbplt <- NULL
+#   nbplt1 <- NULL
+#   nbplt2 <- NULL
+#
+#   #DOYScoupe <- c(165,199,231,271,334)#Avignon
+#   #DOYScoupe <- c(187,229,282,334)#Lusignan
+#   #DOYdeb <- 60
+#   idDOYScoupe <- DOYScoupe - DOYdeb
+#   Ytot <- NULL
+#   Ycoupe <- NULL
+#
+#   YEsp1 <- NULL
+#   YEsp2 <- NULL
+#
+#   QNfix <- NULL
+#   QNupttot <- NULL
+#   QNuptleg <- NULL
+#
+#   PARi1 <- NULL
+#   PARi2 <- NULL
+#   Surf1 <- NULL
+#   Surf2 <- NULL
+#   LRac1 <- NULL
+#   LRac2 <- NULL
+#   MRac1 <- NULL
+#   MRac2 <- NULL
+#   MGini1 <- NULL
+#   MGini2 <- NULL
+#   MAlive1 <- NULL
+#   MAlive2 <- NULL
+#
+#   for (i in 1:length(ls_toto_paquet))#(ls_toto))
+#   {
+#     name <- ls_toto_paquet[i]
+#     damier <- strsplit(name, '_')[[1]][5]
+#     dat <- ltoto[[name]]
+#     s <- dat[dat$V1=='pattern',3]#m2
+#     surfsolref <- cbind(surfsolref, as.numeric(as.character(s)))
+#     nb <- length(dat)-2
+#     nbplt <- cbind(nbplt, nb)
+#
+#     #Y Totaux
+#     MSaerien <- as.matrix(dat[dat$V1=='MSaerien' & dat$steps %in% DOYScoupe,3:(3+nb-1)], ncol=nb)
+#     ProdIaer <- rowSums(MSaerien) / s
+#     Ycoupe <- rbind(Ycoupe, ProdIaer)
+#     Ytot <- cbind(Ytot, sum(ProdIaer))#cumul des 5 coupes
+#
+#
+#     #N totaux et fixation
+#     Qfix <- as.matrix(dat[dat$V1=='Qfix',3:(3+nb-1)], ncol=nb)
+#     Qfix <- as.numeric(rowSums(Qfix) / s)
+#     Nuptake_sol_tot <- as.matrix(dat[dat$V1=='Nuptake_sol',3:(3+nb-1)], ncol=nb)
+#     Nuptake_sol_tot <- as.numeric(rowSums(Nuptake_sol_tot) / s)
+#     QNfix <-cbind(QNfix, sum(Qfix))
+#     QNupttot <- cbind(QNupttot, sum(Nuptake_sol_tot))
+#
+#     #YEsp1
+#     #esp <- 'Fix2'#'Fix3'#'Fix1'#'Fix' #pourquoi c'est ce nom au lieu de Fix???
+#     #esp2 <- 'nonFixSimTest'#'nonFix1'#'nonFix0' #pourquoi c'est ce nom au lieu de Fix???
+#
+#     nomcol <- names(ltoto[[name]])
+#     #if (esp==esp2 & grep('damier', damier)==1)#si deux fois le meme nom d'espece, mais mixture damier
+#     #{
+#     #  idcols <- as.logical(didcols[didcols$damier==damier,1:66])#idcols lu dans fichier qui leve les ambiguite
+#     #} else
+#     #{
+#     idcols <- grepl(esp, nomcol) & !grepl(esp2, nomcol)#contient esp1 et pas esp2
+#     #}
+#
+#     dat1 <- cbind(ltoto[[name]][,c(1:2)], ltoto[[name]][,idcols])
+#     nb1 <- length(dat1)-2
+#     nbplt1 <- cbind(nbplt1, nb1)
+#     if (nb1>0)
+#     {
+#       MS1 <- as.matrix(dat1[dat1$V1=='MSaerien' & dat1$steps %in% DOYScoupe,3:(3+nb1-1)], ncol=nb1)
+#       ProdIaer1 <- rowSums(MS1) / s
+#       Nuptake_sol_leg <- as.matrix(dat1[dat1$V1=='Nuptake_sol',3:(3+nb1-1)], ncol=nb1)
+#       Nuptake_sol_leg <- as.numeric(rowSums(Nuptake_sol_leg) / s)
+#       jPARi1 <- rowSums(as.matrix(dat1[dat1$V1=='PARiPlante' & dat1$steps %in% DOYScoupe,3:(3+nb1-1)], ncol=nb1)) / s
+#       jSurf1 <- rowSums(as.matrix(dat1[dat1$V1=='SurfPlante' & dat1$steps %in% DOYScoupe,3:(3+nb1-1)], ncol=nb1)) / s
+#       jLRac1 <- rowSums(as.matrix(dat1[dat1$V1=='RLTot' & dat1$steps %in% DOYScoupe,3:(3+nb1-1)], ncol=nb1)) / s
+#       jMRac1 <- rowSums(as.matrix(dat1[dat1$V1=='MS_rac_fine' & dat1$steps %in% DOYScoupe,3:(3+nb1-1)], ncol=nb1)) / s
+#       jMPiv1 <- rowSums(as.matrix(dat1[dat1$V1=='MS_pivot' & dat1$steps %in% DOYScoupe,3:(3+nb1-1)], ncol=nb1)) / s
+#       #gini par date sur MSA (ttes les plantes)
+#       Gini1 <- NULL
+#       for (k in 1:length(DOYScoupe))
+#       { Gini1 <- cbind(Gini1, ineq(MS1[k,], type="Gini"))}
+#
+#       #survie
+#       matSV1 <- as.matrix(dat1[dat1$V1 == "aliveB" & dat1$steps %in% DOYScoupe,3:(3+nb1-1)], ncol=nb1)
+#       matSV1[matSV1>0] <- 1
+#       aliveP1 <-  as.numeric(nbplt)-as.matrix(rowSums(matSV1))
+#       aliveDens1 <- t(aliveP1 / s)
+#       #MortDens1 <-  as.matrix(rowSums(matSV1)) / s
+#
+#
+#     } else
+#     {
+#       ProdIaer1 <- 0 #pas de plante de l'esp1
+#       Nuptake_sol_leg <- 0
+#       jPARi1 <- 0
+#       jSurf1 <- 0
+#       jLRac1 <- 0
+#       jMRac1 <- 0
+#       jMPiv1 <- 0
+#       Gini1 <- c(NA,NA,NA,NA)
+#       aliveDens1 <- c(0,0,0,0)
+#     }
+#     YEsp1 <- cbind(YEsp1, sum(ProdIaer1))#cumul des 5 coupes
+#     QNuptleg <- cbind(QNuptleg, sum(Nuptake_sol_leg))
+#     PARi1 <- cbind(PARi1, sum(jPARi1))
+#     Surf1 <- cbind(Surf1, sum(jSurf1))
+#     LRac1 <- cbind(LRac1, max(jLRac1))
+#     MRac1 <- cbind(MRac1, max(jMRac1)+max(jMPiv1))
+#     MGini1 <- rbind(MGini1, Gini1)
+#     MAlive1 <- rbind(MAlive1, aliveDens1)
+#
+#     #YEsp2
+#     #if (esp==esp2 & grep('damier', damier)==1)#si deux fois le meme nom d'espece, mais mixture damier
+#     #{
+#     #  idcols <- !as.logical(didcols[didcols$damier==damier,1:66])#idcols lu dans fichier qui leve les ambiguite
+#     #  idcols[1:2] <- FALSE #remet a faux les deux premieres colonnes
+#     #} else
+#     #{
+#     idcols <- grepl(esp2, nomcol)#contient esp2
+#     #}
+#
+#     dat2 <- cbind(ltoto[[name]][,c(1:2)], ltoto[[name]][,idcols])
+#     nb2 <- length(dat2)-2
+#     nbplt2 <- cbind(nbplt2, nb2)
+#     if (nb2>0)
+#     {
+#       MS2 <- as.matrix(dat2[dat2$V1=='MSaerien' & dat2$steps %in% DOYScoupe,3:(3+nb2-1)], ncol=nb2)
+#       ProdIaer2 <- rowSums(MS2) / s
+#       jPARi2 <- rowSums(as.matrix(dat2[dat2$V1=='PARiPlante' & dat2$steps %in% DOYScoupe,3:(3+nb2-1)], ncol=nb2)) / s
+#       jSurf2 <- rowSums(as.matrix(dat2[dat2$V1=='SurfPlante' & dat2$steps %in% DOYScoupe,3:(3+nb2-1)], ncol=nb2)) / s
+#       jLRac2 <- rowSums(as.matrix(dat2[dat2$V1=='RLTot' & dat2$steps %in% DOYScoupe,3:(3+nb2-1)], ncol=nb2)) / s
+#       jMRac2 <- rowSums(as.matrix(dat2[dat2$V1=='MS_rac_fine' & dat2$steps %in% DOYScoupe,3:(3+nb2-1)], ncol=nb2)) / s
+#       jMPiv2 <- rowSums(as.matrix(dat2[dat2$V1=='MS_pivot' & dat2$steps %in% DOYScoupe,3:(3+nb2-1)], ncol=nb2)) / s
+#       #gini par date sur MSA (ttes les plantes)
+#       Gini2 <- NULL
+#       for (k in 1:length(DOYScoupe))
+#       { Gini2 <- cbind(Gini2, ineq(MS2[k,], type="Gini"))}
+#
+#       #survie
+#       matSV2 <- as.matrix(dat2[dat2$V1 == "aliveB" & dat2$steps %in% DOYScoupe,3:(3+nb1-1)], ncol=nb2)
+#       matSV2[matSV2>0] <- 1
+#       aliveP2 <-  as.numeric(nbplt)-as.matrix(rowSums(matSV2))
+#       aliveDens2 <- t(aliveP2 / s)
+#       #MortDens2 <-  as.matrix(rowSums(matSV2)) / s
+#     }
+#     else
+#     {
+#       ProdIaer2 <- 0 #pas de plante de l'esp2
+#       jPARi2 <- 0
+#       jSurf2 <- 0
+#       jLRac2 <- 0
+#       jMRac2 <- 0
+#       jMPiv2 <- 0
+#       Gini2 <- c(NA,NA,NA,NA)
+#       aliveDens2 <- c(0,0,0,0)
+#     }
+#     YEsp2 <- cbind(YEsp2, sum(ProdIaer2))#cumul des 5 coupes
+#     #YEsp2 <- cbind(YEsp2, sum(ProdIaer2))#cumul des 5 coupes
+#     PARi2 <- cbind(PARi2, sum(jPARi2))
+#     Surf2 <- cbind(Surf2, sum(jSurf2))
+#     LRac2 <- cbind(LRac2, max(jLRac2))
+#     MRac2 <- cbind(MRac2, max(jMRac2)+max(jMPiv2))
+#     MGini2 <- rbind(MGini2, Gini2)
+#     MAlive2 <- rbind(MAlive2, aliveDens2)
+#   }
+#
+#   dtoto$surfsolref <- as.numeric(surfsolref)
+#   dtoto$nbplt <- as.numeric(nbplt)
+#   dtoto$nbplt1 <- as.numeric(nbplt1)
+#   dtoto$nbplt2 <- as.numeric(nbplt2)
+#   dtoto$Ytot <- as.numeric(Ytot)
+#   dtoto$densite <- dtoto$nbplt/dtoto$surfsolref
+#   dtoto$densite1 <- dtoto$nbplt1/dtoto$surfsolref
+#   dtoto$YEsp1 <- as.numeric(YEsp1)
+#   dtoto$densite2 <- dtoto$nbplt2/dtoto$surfsolref
+#   dtoto$YEsp2 <- as.numeric(YEsp2)
+#   dtoto$Semprop1 <- dtoto$densite1/dtoto$densite
+#   dtoto$Yprop1 <- dtoto$YEsp1 / (dtoto$YEsp1 +dtoto$YEsp2)
+#   dtoto$Yprop2 <- dtoto$YEsp2 / (dtoto$YEsp1 +dtoto$YEsp2)
+#   dtoto$QNfix <- as.numeric(QNfix)
+#   dtoto$QNupttot <- as.numeric(QNupttot)
+#   dtoto$QNuptleg <- as.numeric(QNuptleg)
+#   dtoto$QNtot <- dtoto$QNfix + dtoto$QNupttot
+#
+#   #new var
+#   dtoto$Pari1 <- as.numeric(PARi1)
+#   dtoto$Pari2 <- as.numeric(PARi2)
+#   dtoto$Surf1 <- as.numeric(Surf1)
+#   dtoto$Surf2 <- as.numeric(Surf2)
+#   dtoto$PhiSurf1 <- as.numeric(PARi1) / (as.numeric(Surf1) + 10e-12)#Phi Surf
+#   dtoto$PhiSurf2 <- as.numeric(PARi2) / (as.numeric(Surf2) + 10e-12)
+#   dtoto$PhiMass1 <- as.numeric(PARi1) / (as.numeric(YEsp1) + 10e-12)#Phi Mass
+#   dtoto$PhiMass2 <- as.numeric(PARi2) / (as.numeric(YEsp2) + 10e-12)
+#   dtoto$LRac1 <- as.numeric(LRac1)
+#   dtoto$LRac2 <- as.numeric(LRac2)
+#   dtoto$MRac1 <- as.numeric(MRac1)
+#   dtoto$MRac2 <- as.numeric(MRac2)
+#   dtoto$UptNLen1 <- (as.numeric(QNupttot) - as.numeric(QNuptleg)) / (as.numeric(LRac1) + 10e-12)#Uptake par Len
+#   dtoto$UptNLen2 <- as.numeric(QNuptleg) / (as.numeric(LRac2) + 10e-12)
+#   dtoto$UptNMass1 <- (as.numeric(QNupttot) - as.numeric(QNuptleg)) / (as.numeric(MRac1) + 10e-12)#Uptake par Mass root
+#   dtoto$UptNMass2 <- as.numeric(QNuptleg) / (as.numeric(MRac2) + 10e-12)
+#   dtoto$gini1 <- rowMeans(MGini1) #moyenne des gini de ttes les dates (sans retirer pltes mortes)
+#   dtoto$gini2 <- rowMeans(MGini2)
+#   dtoto$alive1 <- as.numeric(MAlive1[,dim(MAlive1)[2]]) #survie derniere date coupe
+#   dtoto$alive2 <- as.numeric(MAlive2[,dim(MAlive2)[2]]) #survie derniere date coupe
+#
+#   dtoto
+#
+# }
+# #fonction a generaliser et a bouger ailleurs
+# # a reprendre -pour asso binaire
+# # build synthetic df des valeur globale par simul
+#
 
 
 
@@ -994,8 +1411,10 @@ calc_neighb_param <- function(tabpar,lspar, ls_idvois, ls_idKin, ls_idnonKin, co
 
 
 
-
-Calc_MSindiv_Corr <- function(ltoto, ls_toto_paquet, ls_paramSD, lspar=c("Len","Lfeuille","phyllochron", "Vmax2", "ELmax", "PPtreshh"))
+#' This function ...
+#'
+#' @export
+Calc_MSindiv_Corr <- function(ltoto, ls_toto_paquet, ls_paramSD, key, ls_idvois, ls_idKin, ls_idnonKin, cote, nblignes, lspar=c("Len","Lfeuille","phyllochron", "Vmax2", "ELmax", "PPtreshh"))
 {
   ## fonction pour mettre en forme valeurs de parametres normalise, valeur d'effet de voisinnage, et calculer les correlations entre indices
 

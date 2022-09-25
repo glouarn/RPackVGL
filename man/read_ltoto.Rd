@@ -4,10 +4,10 @@
 \alias{read_ltoto}
 \title{This function reads the content of the simulation file "toto" of a series of USM and stocks the dynamic daily output into a list}
 \usage{
-read_ltoto(ls_toto)
+read_ltoto(totos, dezip = F, var_ = "ls_toto")
 }
 \arguments{
-\item{ls_toto}{A list of toto files paths}
+\item{totos}{A list of toto files paths or a data frame of corresponding zip and toto files}
 }
 \value{
 A list of data frames. Each element of this list correspond to the simulation output of a single USM

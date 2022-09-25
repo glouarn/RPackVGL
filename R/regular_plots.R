@@ -821,7 +821,9 @@ plotMean_Div <-function (matind, xval, title="", xlab="",ylab="",ylim=c(0,100), 
 
 
 
-
+#' Plot biomass trajetories
+#'
+#' @export
 plot_ranking_lines <- function(tab, id_refdec=1, decHaut=9, decBas=2, id_refline=NA, titre='', ymax=1, xlab='',ylab='')
 {
   # plot de trajectoires d'interaction/ranking entre modalite classees en colonnes dans un tableau (tab)
@@ -836,7 +838,7 @@ plot_ranking_lines <- function(tab, id_refdec=1, decHaut=9, decBas=2, id_refline
 
   nb_dates <- dim(tab)[2]
   plot(-10,-10, xlim=c(0,nb_dates+1), ylim=c(0, ymax),main=titre,xlab=xlab,ylab=ylab)
-  for (i in 1:dim(dd)[1])
+  for (i in 1:dim(tab)[1])
   {
     points(1:nb_dates, as.numeric(tab[i,]), type="b", col="grey")
   }
@@ -881,7 +883,10 @@ plot_ranking_lines <- function(tab, id_refdec=1, decHaut=9, decBas=2, id_refline
 
 
 
-#fonction des exemple de pairs
+
+#' Plot pairs example
+#'
+#' @export
 panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
 {
   usr <- par("usr"); on.exit(par(usr))
@@ -894,5 +899,5 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
 }
 #df <- data.frame(retard,Val_param,ParaMvois,PARivois,MScumvois, MStot_ini, MStot_fin, MStot_coupe1, MStot_coupe2, MStot_coupe3, MStot_coupe4, MStot_coupe5)
 #pairs(df, lower.panel = panel.smooth, upper.panel = panel.cor,gap=0, row1attop=FALSE, main=key)
-
+#fonction des exemple de pairs
 
