@@ -14,7 +14,6 @@ RoxygenNote: 7.1.2
 Imports: 
     data.table,
     ggplot2,
-    ggpubr,
     hrbrthemes,
     magrittr,
     patchwork,
