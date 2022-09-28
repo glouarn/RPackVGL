@@ -797,7 +797,7 @@ build_dtoto_binary_zip1 <- function(zfile, DOYdeb=60, DOYScoupe=c(187,229,282,33
     #marche pour cas de resread simul unitaire
     sp_tabSD <- split(resread[["ls_tabSD"]][[1]], resread[["ls_tabSD"]][[1]]$name)
     MStot <- resread[["ls_MStot"]][[1]]
-    res <- BuildResDecil(MStot, sp_tabSD)
+    res <- BuildResDecil(MStot, sp_tabSD, param_name)
 
     resdec <- cbind(resdec, res)
 

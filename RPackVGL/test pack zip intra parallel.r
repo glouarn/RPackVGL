@@ -30,6 +30,8 @@ dtoto <- do.call("rbind", read_ltoto(ls_dtoto))
 row.names(dtoto) <- 1:dim(dtoto)[1]
 
 
+write.table(dtoto, paste("save_dtoto.csv"), sep=";", col.names = T, row.names = F)
+
 
 
 
@@ -79,4 +81,5 @@ ls_dtoto <- ls_files[grepl('dtoto_', ls_files)]
 dtoto <- do.call("rbind", read_ltoto(ls_dtoto))
 row.names(dtoto) <- 1:dim(dtoto)[1]
 
+write.table(dtoto, paste("save_dtoto.csv"), sep=";", col.names = T, row.names = F)
 
