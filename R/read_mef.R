@@ -690,7 +690,7 @@ build_dtoto_binarySim <- function(ltoto, dtotoBase, ls_toto_paquet, DOYdeb, DOYS
 #' This function ...calcul indices par espece pour un single zip file / unitary process
 #'
 #' @export
-build_dtoto_binary_zip1 <- function(zfile, DOYdeb=60, DOYScoupe=c(187,229,282,334), ls_parsd=c("Len","Lfeuille","phyllochron", "Vmax2", "ELmax", "PPtreshh"), cote=16, nblignes=16, opt_saveindices=F)
+build_dtoto_binary_zip1 <- function(zfile, DOYdeb=60, DOYScoupe=c(187,229,282,334), ls_parsd=c("Len","Lfeuille","phyllochron", "Vmax2", "ELmax", "PPtreshh"), cote=16, nblignes=16, opt_saveindices=F, outpath="")
 {
 
 
@@ -838,7 +838,10 @@ build_dtoto_binary_zip1 <- function(zfile, DOYdeb=60, DOYScoupe=c(187,229,282,33
   dtoto <- cbind(dtoto, res_cor[,1:(dim(res_cor)[2]-1)])
 
   #return
-  write.table(dtoto, paste("dtoto", nomf, ".csv", sep=""), sep=";", col.names = T, row.names = F)
+  nomf <- paste("dtoto", nomf, ".csv", sep="")
+  path_outf <- if (outpath == "") nomf else file.path(outpath , nomf)
+
+  write.table(dtoto, path_outf, sep=";", col.names = T, row.names = F)
   list(dtoto=dtoto, key=key, name=ls_toto)
 }
 
