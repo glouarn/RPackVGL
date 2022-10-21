@@ -16,6 +16,10 @@ library(readxl)
 path_plante <- system.file("extdata", "Parametres_plante_exemple.xls", package = "RPackVGL")
 plt_par <- read_excel(path_plante, sheet="Fix2")
 
+#usm file
+path_usm <- system.file("extdata", "liste_usms_exemple.xls", package = "RPackVGL")
+USMfile <- read_excel(path_usm, sheet="exemple")
+
 #...
 
 
@@ -84,6 +88,6 @@ rmixan <- read.table(path_rmixan, header=T, sep=";", dec=".")
 # Note that names are unquoted.
 # I like using overwrite = T so everytime I run the script the
 # updated objects are saved, but the default is overwrite = F
-usethis::use_data(plt_par, toto, toto_0, outHR_0, BilanN_0, paramsd_0, tabtoto_compet, obs_exemple, ltoto_exemple, toto_sd, outHR_sd, BilanN_sd, paramsd_sd, rmixan,  overwrite = T)
+usethis::use_data(plt_par, toto, toto_0, outHR_0, BilanN_0, paramsd_0, tabtoto_compet, obs_exemple, ltoto_exemple, toto_sd, outHR_sd, BilanN_sd, paramsd_sd, rmixan,USMfile,  overwrite = T)
 
 

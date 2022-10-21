@@ -11,7 +11,8 @@ build_dtoto_binary_zip1(
   ls_parsd = c("Len", "Lfeuille", "phyllochron", "Vmax2", "ELmax", "PPtreshh"),
   cote = 16,
   nblignes = 16,
-  opt_saveindices = F
+  opt_saveindices = F,
+  outpath = ""
 )
 }
 \description{
