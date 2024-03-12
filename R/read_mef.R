@@ -847,6 +847,40 @@ build_dtoto_binary_zip1 <- function(zfile, DOYdeb=60, DOYScoupe=c(187,229,282,33
 
 
 
+
+#' This function ...initiates dtoto colums from a list of zip file names according to names nomenclature with sd in run_legume_usm
+#'
+#' @export
+init_dtoto_binary_zip1 <- function(ls_zip)
+{
+  #11 col (avec sd)
+  cols_ <- strsplit(ls_zip, '_')
+  test_long <- as.numeric(lapply(cols_, length)) #pour separer selon nb de champs (avec sd)
+
+  dtoto <- as.data.frame(t(as.data.frame(cols_[test_long==11])))#as.data.frame(t(as.data.frame(strsplit(ls_toto, '_'))))#
+  row.names(dtoto) <- 1: length(dtoto[,1])
+  dtoto <- dtoto[,c(2,3,4,5,6,7,8,10)]
+  names(dtoto) <- c('usm','lsystem','mix','damier','scenario','Mng', 'seed','sd')
+  dtoto$name <- ls_zip[test_long==11]
+  dtoto$seed <- as.numeric(as.character(dtoto$seed))#substr(as.character(dtoto$seed), 1, 1)
+  dtoto$scenario <- substr(as.character(dtoto$scenario), 9, nchar(as.character(dtoto$scenario)))
+
+  dtoto$keysc <- paste(dtoto$scenario, dtoto$mix, dtoto$Mng, dtoto$sd)# ajout d'une cle unique par scenario
+
+  nomscenar <- as.data.frame(t(as.data.frame(strsplit(dtoto$scenario, "-"))))
+  names(nomscenar) <- c("scenario2", "scenario1")#inverse?
+  row.names(nomscenar) <- 1:length(nomscenar$scenario1)
+  dtoto$scenario1 <- as.character(nomscenar$scenario1)
+  dtoto$scenario2 <- as.character(nomscenar$scenario2)
+
+  dtoto$keysc_usm <- paste(dtoto$keysc, dtoto$usm) #modif cle pour le cas histor
+
+  dtoto
+}
+
+
+
+
 # separe lecture fichier de traitement et calcul ->build_dtoto_binarySim
 
 # build_dtoto <- function(sp_dtoto, key, DOYdeb, DOYScoupe)
